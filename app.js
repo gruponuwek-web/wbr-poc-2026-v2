@@ -77,8 +77,8 @@ function showSection(sectionId) {
         cargarWBRHistorico();
     }
     
-    if (sectionId === 'estados') {
-        cargarEstados();
+    if (sectionId === 'testdesc') {
+        cargarVendedoresParaTest();
     }
 }
 
@@ -723,5 +723,57 @@ function agregarAccion() {
             document.getElementById('accion_responsable').value = '';
             cargarAcciones();
         }
+    });
+}
+
+// =======================================
+// TEST DESC/RETOS
+// =======================================
+
+function cargarVendedoresParaTest() {
+    const select = document.getElementById('testdesc_vendedor');
+    select.innerHTML = '';
+    
+    vendedoresData.forEach(v => {
+        if (v.estado === 'Activo') {
+            const option = document.createElement('option');
+            option.value = v.nombre;
+            option.textContent = v.nombre;
+            select.appendChild(option);
+        }
+    });
+}
+
+function testDescGuardar() {
+    const mes = document.getElementById('testdesc_mes').value;
+    const semana = document.getElementById('testdesc_semana').value;
+    const vendedor = document.getElementById('testdesc_vendedor').value;
+    const texto = document.getElementById('testdesc_texto').value.trim();
+    
+    if (!mes || !semana || !vendedor || !texto) {
+        mostrarMensaje('testdescMsg', '❌ Completa todos los campos', 'error');
+        return;
+    }
+    
+    console.log('📝 TEST DESC: Guardando', mes, 'Semana', semana, vendedor);
+    
+    llamarAppScript('guardarWBRResumen', {
+        mes: mes,
+        semana: semana,
+        vendedor: vendedor,
+        descubrimientosRetos: texto,
+        usuario: usuarioActual
+    }).then(response => {
+        console.log('📤 Respuesta:', response);
+        
+        if (response.exito) {
+            mostrarMensaje('testdescMsg', '✅ GUARDADO en WBR_RESUMEN. Verifica Sheets', 'success');
+            document.getElementById('testdesc_texto').value = '';
+        } else {
+            mostrarMensaje('testdescMsg', '❌ Error: ' + response.mensaje, 'error');
+        }
+    }).catch(err => {
+        console.error('❌ Error:', err);
+        mostrarMensaje('testdescMsg', '❌ Fallo: ' + err, 'error');
     });
 }
