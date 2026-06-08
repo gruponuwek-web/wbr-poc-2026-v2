@@ -547,8 +547,101 @@ function descargarPDFWBR(mes, semana) {
 }
 
 // =======================================
-// ACCIONES
+// ESTADOS - GESTIÓN DE COMPROMISOS
 // =======================================
+
+function cargarEstados() {
+    const mes = document.getElementById('estados_mes').value;
+    llamarAppScript('obtenerCompromisos', { mes }).then(compromisos => {
+        const container = document.getElementById('estadosContent');
+        
+        if (compromisos.length === 0) {
+            container.innerHTML = '<p style="color: #999;">Sin compromisos para este mes</p>';
+            return;
+        }
+        
+        container.innerHTML = compromisos.map(c => `
+            <div class="estado-item">
+                <div class="estado-label">
+                    <strong>${c.cliente}</strong>
+                    <small>${c.vendedor} • ${c.clasificacion}</small>
+                </div>
+                <div class="estado-buttons">
+                    <button class="btn-estado ${c.estado === 'Completado' ? 'completado' : ''}" 
+                            onclick="seleccionarEstado('${c.id}', 'Completado')" 
+                            data-estado="${c.id}">
+                        ✓
+                    </button>
+                    <button class="btn-estado ${c.estado === 'No Completado' ? 'nocompletado' : ''}" 
+                            onclick="seleccionarEstado('${c.id}', 'No Completado')" 
+                            data-estado="${c.id}">
+                        ✗
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    });
+}
+
+function seleccionarEstado(idCompromiso, nuevoEstado) {
+    const botones = document.querySelectorAll(`[data-estado="${idCompromiso}"]`);
+    botones.forEach(btn => btn.classList.remove('completado', 'nocompletado'));
+    
+    const botonSeleccionado = event.target;
+    if (nuevoEstado === 'Completado') {
+        botonSeleccionado.classList.add('completado');
+    } else {
+        botonSeleccionado.classList.add('nocompletado');
+    }
+    
+    // Guardar el estado en un objeto para luego enviarlo
+    if (!window.estadosCambiados) {
+        window.estadosCambiados = {};
+    }
+    window.estadosCambiados[idCompromiso] = nuevoEstado;
+}
+
+function guardarEstados() {
+    if (!window.estadosCambiados || Object.keys(window.estadosCambiados).length === 0) {
+        mostrarMensaje('estadosMsg', 'No hay cambios para guardar', 'error');
+        return;
+    }
+    
+    console.log('💾 Guardando estados:', window.estadosCambiados);
+    
+    setLoadingButton('btnGuardarEstados', true);
+    
+    const promesas = [];
+    for (const idComp in window.estadosCambiados) {
+        const nuevoEstado = window.estadosCambiados[idComp];
+        const completado = nuevoEstado === 'Completado';
+        
+        const promesa = llamarAppScript('actualizarEstadoCompromiso', {
+            idCompromiso: idComp,
+            completado: completado.toString()
+        });
+        
+        promesas.push(promesa);
+    }
+    
+    Promise.all(promesas).then(resultados => {
+        console.log('✅ Respuestas:', resultados);
+        setLoadingButton('btnGuardarEstados', false);
+        
+        const exitosos = resultados.filter(r => r.exito).length;
+        if (exitosos === resultados.length) {
+            mostrarMensaje('estadosMsg', `✅ ${exitosos} compromisos actualizados`, 'success');
+            window.estadosCambiados = {};
+            cargarEstados();
+        } else {
+            mostrarMensaje('estadosMsg', `⚠️ ${exitosos}/${resultados.length} actualizados`, 'error');
+        }
+    }).catch(err => {
+        console.error('❌ Error:', err);
+        setLoadingButton('btnGuardarEstados', false);
+        mostrarMensaje('estadosMsg', '❌ Error al guardar: ' + err, 'error');
+    });
+}
 
 function cargarAcciones() {
     const mes = document.getElementById('accion_mes').value;
