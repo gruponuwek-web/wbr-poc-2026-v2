@@ -429,18 +429,31 @@ function cargarCompromisosEnForm(vendedorNombre, mes) {
 }
 
 function guardarWBRCompleta() {
-    if (!wbrActualEditando) return;
+    console.log('🔵 guardarWBRCompleta iniciada');
+    
+    if (!wbrActualEditando) {
+        console.error('❌ wbrActualEditando no definido');
+        return;
+    }
     
     const { mes, semana } = wbrActualEditando;
+    console.log('📅 Guardando WBR:', mes, 'Semana:', semana);
+    
     setLoadingButton('btnGuardarWBR', true);
+    mostrarMensaje('wbrMsg', 'Guardando...', 'success');
     
     const promesasGuardar = [];
     
     vendedoresData.forEach(vendedor => {
         if (vendedor.estado === 'Activo') {
             const vid = `v_${vendedor.id}`;
+            console.log('👤 Procesando:', vendedor.nombre);
+            
             const resumen = document.getElementById(`resumen_${vid}`)?.value || '';
             const actividades = document.getElementById(`activ_${vid}`)?.value || '';
+            
+            console.log('  Resumen:', resumen.substring(0, 20) + '...');
+            console.log('  Actividades:', actividades.substring(0, 20) + '...');
             
             // Actualizar estado de compromisos (radio buttons: ✓ o ✗)
             document.querySelectorAll(`.comp-estado[data-vid="${vid}"]`).forEach(radio => {
@@ -448,6 +461,8 @@ function guardarWBRCompleta() {
                     const idComp = radio.getAttribute('data-compromiso');
                     const estado = radio.getAttribute('data-estado');
                     const completado = estado === 'Completado';
+                    
+                    console.log('  ✓ Compromiso:', idComp, '→', estado);
                     
                     const promesa = llamarAppScript('actualizarEstadoCompromiso', {
                         idCompromiso: idComp,
@@ -460,6 +475,7 @@ function guardarWBRCompleta() {
             
             // Guardar resumen (Paso 2)
             if (resumen) {
+                console.log('  📝 Guardando resumen en WBR_RESUMEN');
                 const promesa = llamarAppScript('guardarWBRResumen', {
                     mes,
                     semana,
@@ -472,6 +488,7 @@ function guardarWBRCompleta() {
             
             // Guardar actividades (Paso 3) como acciones
             if (actividades) {
+                console.log('  ⚡ Guardando actividades en ACCIONES');
                 const promesa = llamarAppScript('agregarAccion', {
                     mes,
                     semana,
@@ -487,15 +504,33 @@ function guardarWBRCompleta() {
         }
     });
     
-    Promise.all(promesasGuardar).then(() => {
+    console.log('🔄 Total de promesas:', promesasGuardar.length);
+    
+    Promise.all(promesasGuardar).then(results => {
+        console.log('✅ Todas las promesas completadas:', results);
+        
         llamarAppScript('cerrarWBR', { mes, semana }).then(response => {
+            console.log('🔒 Respuesta cerrarWBR:', response);
+            
             setLoadingButton('btnGuardarWBR', false);
             if (response.exito) {
-                mostrarMensaje('wbrMsg', '✅ WBR guardada', 'success');
-                cerrarWBRForm();
-                cargarWBRHistorico();
+                mostrarMensaje('wbrMsg', '✅ WBR guardada correctamente', 'success');
+                setTimeout(() => {
+                    cerrarWBRForm();
+                    cargarWBRHistorico();
+                }, 1000);
+            } else {
+                mostrarMensaje('wbrMsg', '❌ Error al cerrar WBR: ' + response.mensaje, 'error');
             }
+        }).catch(err => {
+            console.error('❌ Error en cerrarWBR:', err);
+            setLoadingButton('btnGuardarWBR', false);
+            mostrarMensaje('wbrMsg', '❌ Error: ' + err.toString(), 'error');
         });
+    }).catch(err => {
+        console.error('❌ Error en Promise.all:', err);
+        setLoadingButton('btnGuardarWBR', false);
+        mostrarMensaje('wbrMsg', '❌ Error al guardar: ' + err.toString(), 'error');
     });
 }
 
