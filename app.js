@@ -18,7 +18,20 @@ const SEMANAS_POR_MES = { 'Enero': 4, 'Febrero': 4, 'Marzo': 5, 'Abril': 4, 'May
 
 window.addEventListener('DOMContentLoaded', () => {
     cargarDatos();
+    actualizarFechaHora();
+    setInterval(actualizarFechaHora, 1000);
 });
+
+function actualizarFechaHora() {
+    const now = new Date();
+    const dia = String(now.getDate()).padStart(2, '0');
+    const mes = String(now.getMonth() + 1).padStart(2, '0');
+    const año = now.getFullYear();
+    const hora = String(now.getHours()).padStart(2, '0');
+    const minuto = String(now.getMinutes()).padStart(2, '0');
+    
+    document.getElementById('fechaHora').textContent = `${dia}/${mes}/${año} ${hora}:${minuto}`;
+}
 
 function cargarDatos() {
     cargarVendedores();
@@ -68,6 +81,14 @@ function showSection(sectionId) {
 // =======================================
 // UTILIDADES
 // =======================================
+
+function getWeekOfYear(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
 
 function setLoadingButton(btnId, loading) {
     const btn = document.getElementById(btnId);
@@ -270,13 +291,18 @@ function toggleAccordion(header) {
     }
 }
 
-function generarWeekRow(mes, semana, wbrExistente) {
+function generarWeekRow(mes, semanaDelMes, wbrExistente) {
+    // Calcular semana del año para este mes
+    const mesIndex = MESES.indexOf(mes);
+    const fechaEjemplo = new Date(2026, mesIndex, semanaDelMes * 7);
+    const semanaDelAño = getWeekOfYear(fechaEjemplo);
+    
     const row = document.createElement('div');
     row.className = 'week-row';
     
     const info = document.createElement('div');
     info.className = 'week-info';
-    info.innerHTML = `<h4>📌 Semana ${semana}</h4><p>${wbrExistente ? `Estado: ${wbrExistente.estado}` : 'Sin crear'}</p>`;
+    info.innerHTML = `<h4>📌 Semana ${semanaDelAño}</h4><p>${wbrExistente ? `Estado: ${wbrExistente.estado}` : 'Sin crear'}</p>`;
     
     const actions = document.createElement('div');
     actions.className = 'week-actions';
@@ -285,7 +311,7 @@ function generarWeekRow(mes, semana, wbrExistente) {
         const btnCrear = document.createElement('button');
         btnCrear.className = 'btn-primary';
         btnCrear.textContent = '✏️ Crear/Editar';
-        btnCrear.onclick = () => abrirFormularioWBR(mes, semana);
+        btnCrear.onclick = () => abrirFormularioWBR(mes, semanaDelMes);
         actions.appendChild(btnCrear);
     }
     
@@ -293,13 +319,13 @@ function generarWeekRow(mes, semana, wbrExistente) {
         const btnVer = document.createElement('button');
         btnVer.className = 'btn-info';
         btnVer.textContent = '👁️ Ver Resumen';
-        btnVer.onclick = () => verResumenWBR(mes, semana);
+        btnVer.onclick = () => verResumenWBR(mes, semanaDelMes);
         actions.appendChild(btnVer);
         
         const btnPDF = document.createElement('button');
         btnPDF.className = 'btn-warning';
         btnPDF.textContent = '📄 PDF';
-        btnPDF.onclick = () => descargarPDFWBR(mes, semana);
+        btnPDF.onclick = () => descargarPDFWBR(mes, semanaDelMes);
         actions.appendChild(btnPDF);
     }
     
