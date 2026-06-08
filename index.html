@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WBR Sistema v2 - Gestión Comercial</title>
+    <title>WBR Sistema v3 - Gestión Comercial</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         * {
@@ -34,377 +34,104 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
-        .navbar h1 {
-            font-size: 24px;
-        }
+        .navbar h1 { font-size: 24px; }
+        .user-info { display: flex; gap: 20px; align-items: center; }
 
-        .user-info {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-        }
+        .sidebar { display: flex; height: calc(100vh - 70px); }
+        .menu { background: #34495e; color: white; width: 250px; padding: 20px 0; overflow-y: auto; }
+        .menu button { width: 100%; text-align: left; padding: 15px 25px; border: none; background: none; color: #ecf0f1; cursor: pointer; font-size: 14px; transition: all 0.3s; border-left: 4px solid transparent; }
+        .menu button:hover, .menu button.active { background: #2c3e50; border-left-color: #667eea; color: #667eea; }
 
-        .sidebar {
-            display: flex;
-            height: calc(100vh - 70px);
-        }
+        .content { flex: 1; padding: 30px; overflow-y: auto; }
+        .section { display: none; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .section.active { display: block; }
+        .section h2 { color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
 
-        .menu {
-            background: #34495e;
-            color: white;
-            width: 250px;
-            padding: 20px 0;
-            overflow-y: auto;
-        }
+        .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
+        .form-group label { margin-bottom: 5px; color: #2c3e50; font-weight: bold; }
+        .form-group input, .form-group select, .form-group textarea { padding: 10px; border: 1px solid #bdc3c7; border-radius: 5px; font-size: 14px; font-family: inherit; }
+        .form-group textarea { resize: vertical; min-height: 100px; }
+        .form-group.inline { flex-direction: row; gap: 15px; }
+        .form-group.inline > div { flex: 1; display: flex; flex-direction: column; }
 
-        .menu button {
-            width: 100%;
-            text-align: left;
-            padding: 15px 25px;
-            border: none;
-            background: none;
-            color: #ecf0f1;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
-            border-left: 4px solid transparent;
-        }
-
-        .menu button:hover, .menu button.active {
-            background: #2c3e50;
-            border-left-color: #667eea;
-            color: #667eea;
-        }
-
-        .content {
-            flex: 1;
-            padding: 30px;
-            overflow-y: auto;
-        }
-
-        .section {
-            display: none;
-            background: white;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .section.active {
-            display: block;
-        }
-
-        .section h2 {
-            color: #2c3e50;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .form-group label {
-            margin-bottom: 5px;
-            color: #2c3e50;
-            font-weight: bold;
-        }
-
-        .form-group input, .form-group select, .form-group textarea {
-            padding: 10px;
-            border: 1px solid #bdc3c7;
-            border-radius: 5px;
-            font-size: 14px;
-            font-family: inherit;
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 100px;
-        }
-
-        .form-group.inline {
-            flex-direction: row;
-            gap: 15px;
-        }
-
-        .form-group.inline > div {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .btn-primary, .btn-success, .btn-danger, .btn-warning, .btn-info {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            margin-top: 10px;
-            margin-right: 10px;
-            transition: opacity 0.2s;
-        }
-
+        .btn-primary, .btn-success, .btn-danger, .btn-warning, .btn-info { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; margin-top: 10px; margin-right: 10px; transition: opacity 0.2s; }
         .btn-primary { background: #667eea; color: white; }
         .btn-success { background: #27ae60; color: white; }
         .btn-danger { background: #e74c3c; color: white; }
         .btn-warning { background: #f39c12; color: white; }
         .btn-info { background: #3498db; color: white; }
+        .btn-primary:disabled, .btn-success:disabled { opacity: 0.6; cursor: not-allowed; }
 
-        .btn-primary:disabled, .btn-success:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
+        .message { padding: 15px; border-radius: 5px; margin-bottom: 15px; }
+        .message.success { background: #d5f4e6; color: #27ae60; border-left: 4px solid #27ae60; }
+        .message.error { background: #fadbd8; color: #e74c3c; border-left: 4px solid #e74c3c; }
 
-        .message {
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-        }
+        .loading { text-align: center; color: #667eea; font-style: italic; padding: 20px; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 10px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        .message.success {
-            background: #d5f4e6;
-            color: #27ae60;
-            border-left: 4px solid #27ae60;
-        }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { background: #667eea; color: white; padding: 12px; text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid #ecf0f1; }
+        tr:hover { background: #f8f9fa; }
 
-        .message.error {
-            background: #fadbd8;
-            color: #e74c3c;
-            border-left: 4px solid #e74c3c;
-        }
-
-        .loading {
-            text-align: center;
-            color: #667eea;
-            font-style: italic;
-            padding: 20px;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 10px auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-
-        th {
-            background: #667eea;
-            color: white;
-            padding: 12px;
-            text-align: left;
-        }
-
-        td {
-            padding: 12px;
-            border-bottom: 1px solid #ecf0f1;
-        }
-
-        tr:hover {
-            background: #f8f9fa;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
+        .badge { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
         .badge-activo { background: #d5f4e6; color: #27ae60; }
         .badge-pausado { background: #fadbd8; color: #e74c3c; }
 
-        .info-card {
-            background: #f9f9f9;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-            margin-bottom: 15px;
-        }
+        .info-card { background: #f9f9f9; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea; margin-bottom: 15px; }
+        .info-card p { margin: 5px 0; color: #2c3e50; }
+        .info-card strong { color: #667eea; }
 
-        /* ===== ACORDEÓN PARA WBR ===== */
+        /* ACORDEÓN */
         .wbr-accordion {
-            margin-bottom: 15px;
-        }
-
-        .accordion-month {
-            background: white;
-            border: 1px solid #ecf0f1;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            overflow: hidden;
-        }
-
-        .accordion-month-header {
-            background: #667eea;
-            color: white;
-            padding: 15px 20px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: bold;
-            transition: background 0.3s;
-        }
-
-        .accordion-month-header:hover {
-            background: #5568d3;
-        }
-
-        .accordion-month-header.collapsed::after {
-            content: "▶";
-            transition: transform 0.3s;
-        }
-
-        .accordion-month-header.expanded::after {
-            content: "▼";
-        }
-
-        .accordion-month-content {
-            display: none;
-            padding: 20px;
-        }
-
-        .accordion-month-content.show {
-            display: block;
-        }
-
-        .week-row {
-            background: #f9f9f9;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            border-left: 4px solid #667eea;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .week-info {
-            flex: 1;
-        }
-
-        .week-info h4 {
-            color: #2c3e50;
-            margin-bottom: 5px;
-        }
-
-        .week-info p {
-            color: #666;
-            font-size: 12px;
-        }
-
-        .week-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        /* ===== PASOS HORIZONTALES ===== */
-        .steps-container {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: repeat(3, 1fr);
             gap: 15px;
-            margin-bottom: 20px;
-            margin-top: 20px;
+            margin-bottom: 15px;
         }
+        
+        .accordion-month { background: white; border: 1px solid #ecf0f1; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 5px rgba(0,0,0,0.08); }
+        .accordion-month-header { background: #667eea; color: white; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: bold; transition: background 0.3s; }
+        .accordion-month-header:hover { background: #5568d3; }
+        .accordion-month-header.collapsed::after { content: "▶"; transition: transform 0.3s; }
+        .accordion-month-header.expanded::after { content: "▼"; }
+        .accordion-month-content { display: none; padding: 20px; }
+        .accordion-month-content.show { display: block; }
 
-        .step {
-            background: #f9f9f9;
-            padding: 15px;
-            border-radius: 5px;
-            border-left: 4px solid #667eea;
-        }
+        .week-row { background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 15px; border-left: 4px solid #667eea; display: flex; justify-content: space-between; align-items: center; }
+        .week-info { flex: 1; }
+        .week-info h4 { color: #2c3e50; margin-bottom: 5px; }
+        .week-info p { color: #666; font-size: 12px; }
+        .week-actions { display: flex; gap: 10px; }
 
-        .step h4 {
-            color: #667eea;
-            margin-bottom: 10px;
-            font-size: 14px;
-            text-align: center;
-        }
+        /* PASOS HORIZONTALES */
+        .steps-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; margin-top: 20px; }
+        .step { background: #f9f9f9; padding: 15px; border-radius: 5px; border-left: 4px solid #667eea; }
+        .step h4 { color: #667eea; margin-bottom: 10px; font-size: 14px; text-align: center; }
+        .step-number { display: inline-block; background: #667eea; color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; margin-right: 5px; }
 
-        .step-number {
-            display: inline-block;
-            background: #667eea;
-            color: white;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 24px;
-            font-weight: bold;
-            font-size: 12px;
-            margin-right: 5px;
-        }
+        .compromise-item { display: flex; align-items: center; padding: 8px; background: white; margin-bottom: 6px; border-radius: 4px; border: 1px solid #ecf0f1; }
+        .compromise-item input[type="checkbox"] { margin-right: 8px; width: 16px; height: 16px; cursor: pointer; }
+        .compromise-item label { cursor: pointer; flex: 1; margin: 0; font-size: 13px; }
 
-        .compromise-item {
-            display: flex;
-            align-items: center;
-            padding: 8px;
-            background: white;
-            margin-bottom: 6px;
-            border-radius: 4px;
-            border: 1px solid #ecf0f1;
-        }
-
-        .compromise-item input[type="checkbox"] {
-            margin-right: 8px;
-            width: 16px;
-            height: 16px;
-            cursor: pointer;
-        }
-
-        .compromise-item label {
-            cursor: pointer;
-            flex: 1;
-            margin: 0;
-            font-size: 13px;
-        }
-
-        .form-group.inline {
-            flex-direction: row;
-            gap: 15px;
-        }
-
-        .form-group.inline > div {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
+        /* MODAL */
+        #wbrFormModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto; }
+        #wbrFormModal > div { background: white; margin: 50px auto; padding: 30px; border-radius: 8px; width: 90%; max-width: 900px; }
     </style>
 </head>
 <body>
 
 <div class="app-container">
-    <!-- NAVBAR -->
     <div class="navbar">
-        <h1>📊 WBR Sistema v2 - Gestión Comercial</h1>
+        <h1>📊 WBR Sistema v3 - Gestión Comercial</h1>
         <div class="user-info">
+            <span id="fechaHora" style="font-size: 12px; color: #bdc3c7; margin-right: 20px;">--:--</span>
             <span id="userDisplay">Usuario: Cargando...</span>
         </div>
     </div>
 
-    <!-- SIDEBAR + CONTENT -->
     <div class="sidebar">
-        <!-- MENU -->
         <div class="menu">
             <button class="menu-btn active" onclick="showSection('dashboard')">📈 Dashboard</button>
             <button class="menu-btn" onclick="showSection('vendedores')">👥 Vendedores</button>
@@ -413,16 +140,11 @@
             <button class="menu-btn" onclick="showSection('acciones')">⚡ Acciones</button>
         </div>
 
-        <!-- CONTENT -->
         <div class="content">
-
             <!-- DASHBOARD -->
             <section id="dashboard" class="section active">
                 <h2>📈 Dashboard</h2>
-                <div id="dashboardContent" class="loading">
-                    <div class="spinner"></div>
-                    Cargando datos...
-                </div>
+                <div id="dashboardContent" class="loading"><div class="spinner"></div>Cargando datos...</div>
             </section>
 
             <!-- VENDEDORES -->
@@ -435,80 +157,35 @@
                 </div>
                 <div id="vendedorMsg"></div>
                 <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Nombre</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="vendedorTableBody">
-                        <tr><td colspan="4" class="loading"><div class="spinner"></div></td></tr>
-                    </tbody>
+                    <thead><tr><th>ID</th><th>Nombre</th><th>Estado</th><th>Acciones</th></tr></thead>
+                    <tbody id="vendedorTableBody"><tr><td colspan="4" class="loading"><div class="spinner"></div></td></tr></tbody>
                 </table>
             </section>
 
             <!-- COMPROMISOS -->
             <section id="compromisos" class="section">
                 <h2>📋 Compromisos</h2>
-                
                 <div class="form-group inline">
-                    <div>
-                        <label>Mes:</label>
-                        <select id="compromiso_mes" onchange="cargarCompromisos()">
-                            <option value="Enero">Enero</option>
-                            <option value="Febrero">Febrero</option>
-                            <option value="Marzo">Marzo</option>
-                            <option value="Abril">Abril</option>
-                            <option value="Mayo">Mayo</option>
-                            <option value="Junio" selected>Junio</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>Vendedor:</label>
-                        <select id="compromiso_vendedor"></select>
-                    </div>
+                    <div><label>Mes:</label><select id="compromiso_mes" onchange="cargarCompromisos()"><option value="Junio" selected>Junio</option></select></div>
+                    <div><label>Vendedor:</label><select id="compromiso_vendedor"></select></div>
                 </div>
-
                 <div class="form-group inline">
-                    <div>
-                        <label>Cliente:</label>
-                        <input type="text" id="compromiso_cliente" placeholder="Nombre del cliente">
-                    </div>
-                    <div>
-                        <label>Clasificación:</label>
-                        <select id="compromiso_clasificacion">
-                            <option value="Prospección">Prospección</option>
-                            <option value="Crecimiento">Crecimiento</option>
-                            <option value="Recuperado">Recuperado</option>
-                        </select>
-                    </div>
+                    <div><label>Cliente:</label><input type="text" id="compromiso_cliente" placeholder="Nombre del cliente"></div>
+                    <div><label>Clasificación:</label><select id="compromiso_clasificacion"><option value="Prospección">Prospección</option><option value="Crecimiento">Crecimiento</option><option value="Recuperado">Recuperado</option></select></div>
                 </div>
-
                 <button class="btn-success" id="btnAgregarCompromiso" onclick="agregarCompromiso()">Crear Compromiso</button>
                 <div id="compromisoMsg"></div>
                 <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Vendedor</th>
-                            <th>Cliente</th>
-                            <th>Clasificación</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody id="compromisoTableBody">
-                        <tr><td colspan="5" class="loading"><div class="spinner"></div></td></tr>
-                    </tbody>
+                    <thead><tr><th>ID</th><th>Vendedor</th><th>Cliente</th><th>Clasificación</th><th>Estado</th></tr></thead>
+                    <tbody id="compromisoTableBody"><tr><td colspan="5" class="loading"><div class="spinner"></div></td></tr></tbody>
                 </table>
             </section>
 
-            <!-- WBR CON ACORDEONES -->
+            <!-- WBR -->
             <section id="wbr" class="section">
                 <h2>📅 Weekly Business Review</h2>
                 <div id="wbrMsg"></div>
-                <div id="wbrAccordionContainer" class="wbr-accordion"></div>
+                <div id="wbrAccordionContainer"></div>
             </section>
 
             <!-- ACCIONES -->
@@ -516,9 +193,7 @@
                 <h2>⚡ Acciones de Seguimiento</h2>
                 <div class="form-group">
                     <label>Mes:</label>
-                    <select id="accion_mes" onchange="cargarAcciones()">
-                        <option value="Junio" selected>Junio</option>
-                    </select>
+                    <select id="accion_mes" onchange="cargarAcciones()"><option value="Junio" selected>Junio</option></select>
                 </div>
                 <div class="form-group">
                     <label>Semana:</label>
@@ -526,12 +201,7 @@
                 </div>
                 <div class="form-group">
                     <label>Tipo:</label>
-                    <select id="accion_tipo">
-                        <option value="Tarea">Tarea</option>
-                        <option value="Llamada">Llamada</option>
-                        <option value="Reunión">Reunión</option>
-                        <option value="Email">Email</option>
-                    </select>
+                    <select id="accion_tipo"><option value="Tarea">Tarea</option><option value="Llamada">Llamada</option><option value="Reunión">Reunión</option><option value="Email">Email</option></select>
                 </div>
                 <div class="form-group">
                     <label>Vendedor:</label>
@@ -552,29 +222,17 @@
                 <button class="btn-success" id="btnAgregarAccion" onclick="agregarAccion()">Crear Acción</button>
                 <div id="accionMsg"></div>
                 <table>
-                    <thead>
-                        <tr>
-                            <th>Tipo</th>
-                            <th>Vendedor</th>
-                            <th>Descripción</th>
-                            <th>Responsable</th>
-                            <th>Vencimiento</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody id="accionTableBody">
-                        <tr><td colspan="6" class="loading"><div class="spinner"></div></td></tr>
-                    </tbody>
+                    <thead><tr><th>Tipo</th><th>Vendedor</th><th>Descripción</th><th>Responsable</th><th>Vencimiento</th><th>Estado</th></tr></thead>
+                    <tbody id="accionTableBody"><tr><td colspan="6" class="loading"><div class="spinner"></div></td></tr></tbody>
                 </table>
             </section>
-
         </div>
     </div>
 </div>
 
-<!-- Modal oculto para llenar WBR -->
-<div id="wbrFormModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
-    <div style="background: white; margin: 50px auto; padding: 30px; border-radius: 8px; width: 90%; max-width: 800px;">
+<!-- MODAL PARA LLENAR WBR -->
+<div id="wbrFormModal">
+    <div>
         <h2 id="wbrFormTitle">WBR</h2>
         <div id="wbrFormContent"></div>
         <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
@@ -585,6 +243,5 @@
 </div>
 
 <script src="app.js"></script>
-
 </body>
 </html>
