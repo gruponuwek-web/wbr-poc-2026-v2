@@ -601,21 +601,31 @@ function cargarEstados() {
 }
 
 function seleccionarEstado(idCompromiso, nuevoEstado) {
-    const botones = document.querySelectorAll(`[data-estado="${idCompromiso}"]`);
-    botones.forEach(btn => btn.classList.remove('completado', 'nocompletado'));
+    console.log('🔵 seleccionarEstado:', idCompromiso, nuevoEstado);
     
-    const botonSeleccionado = event.target;
-    if (nuevoEstado === 'Completado') {
-        botonSeleccionado.classList.add('completado');
-    } else {
-        botonSeleccionado.classList.add('nocompletado');
+    // Deseleccionar todos los botones de este compromiso
+    const botones = document.querySelectorAll(`[data-estado="${idCompromiso}"]`);
+    botones.forEach(btn => {
+        btn.classList.remove('completado', 'nocompletado');
+    });
+    
+    // Seleccionar el botón que se hizo click (ahora es el currentTarget)
+    if (event && event.currentTarget) {
+        if (nuevoEstado === 'Completado') {
+            event.currentTarget.classList.add('completado');
+        } else {
+            event.currentTarget.classList.add('nocompletado');
+        }
     }
     
-    // Guardar el estado en un objeto para luego enviarlo
+    // Guardar el cambio
     if (!window.estadosCambiados) {
         window.estadosCambiados = {};
     }
     window.estadosCambiados[idCompromiso] = nuevoEstado;
+    
+    console.log('✅ Guardado en memoria:', idCompromiso, '→', nuevoEstado);
+    console.log('📊 Total cambios:', Object.keys(window.estadosCambiados).length);
 }
 
 function guardarEstados() {
