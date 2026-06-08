@@ -343,10 +343,13 @@ function generarSeccionVendedor(vendedor, mes, semana) {
             <h3>👤 ${vendedor.nombre}</h3>
             
             <div class="steps-container">
-                <!-- PASO 1: Compromisos -->
+                <!-- PASO 1: Compromisos CON PALOMITA Y TACHE -->
                 <div class="step">
                     <h4><span class="step-number">1</span>Compromisos</h4>
                     <div id="compromisos_${vid}" class="loading"><div class="spinner"></div></div>
+                    <div style="margin-top: 10px; font-size: 11px; color: #999;">
+                        ✓ = Completado | ✗ = No Completado
+                    </div>
                 </div>
                 
                 <!-- PASO 2: Descubrimientos y Retos (UN SOLO CAMPO) -->
@@ -383,8 +386,15 @@ function cargarCompromisosEnForm(vendedorNombre, mes) {
             } else {
                 container.innerHTML = compromisos.map(c => `
                     <div class="compromise-item">
-                        <input type="checkbox" class="comp-check" data-vid="${vid}" data-compromiso="${c.id}">
-                        <label><strong>${c.cliente}</strong></label>
+                        <div style="display: flex; gap: 5px; margin-right: 8px;">
+                            <input type="radio" name="estado_${c.id}" value="completado" class="comp-estado" data-vid="${vid}" data-compromiso="${c.id}" data-estado="Completado">
+                            <span style="font-size: 11px; color: #27ae60; font-weight: bold;">✓</span>
+                        </div>
+                        <div style="display: flex; gap: 5px; margin-right: 10px;">
+                            <input type="radio" name="estado_${c.id}" value="nocompletado" class="comp-estado" data-vid="${vid}" data-compromiso="${c.id}" data-estado="No Completado">
+                            <span style="font-size: 11px; color: #e74c3c; font-weight: bold;">✗</span>
+                        </div>
+                        <label style="flex: 1; margin: 0; font-size: 13px;"><strong>${c.cliente}</strong></label>
                     </div>
                 `).join('');
             }
@@ -406,17 +416,20 @@ function guardarWBRCompleta() {
             const resumen = document.getElementById(`resumen_${vid}`)?.value || '';
             const actividades = document.getElementById(`activ_${vid}`)?.value || '';
             
-            // Actualizar estado de compromisos en COMPROMISOS
-            document.querySelectorAll(`.comp-check[data-vid="${vid}"]`).forEach(checkbox => {
-                const idComp = checkbox.getAttribute('data-compromiso');
-                const completado = checkbox.checked;
-                
-                const promesa = llamarAppScript('actualizarEstadoCompromiso', {
-                    idCompromiso: idComp,
-                    completado: completado.toString()
-                });
-                
-                promesasGuardar.push(promesa);
+            // Actualizar estado de compromisos (radio buttons: ✓ o ✗)
+            document.querySelectorAll(`.comp-estado[data-vid="${vid}"]`).forEach(radio => {
+                if (radio.checked) {
+                    const idComp = radio.getAttribute('data-compromiso');
+                    const estado = radio.getAttribute('data-estado');
+                    const completado = estado === 'Completado';
+                    
+                    const promesa = llamarAppScript('actualizarEstadoCompromiso', {
+                        idCompromiso: idComp,
+                        completado: completado.toString()
+                    });
+                    
+                    promesasGuardar.push(promesa);
+                }
             });
             
             // Guardar resumen (Paso 2)
