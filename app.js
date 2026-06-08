@@ -556,15 +556,22 @@ function descargarPDFWBR(mes, semana) {
 
 function cargarEstados() {
     const mes = document.getElementById('estados_mes').value;
+    console.log('🔵 cargarEstados: mes=' + mes);
+    
+    document.getElementById('estadosContent').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando...</div>';
+    
     llamarAppScript('obtenerCompromisos', { mes }).then(compromisos => {
-        const container = document.getElementById('estadosContent');
+        console.log('📊 Compromisos recibidos:', compromisos);
         
-        if (compromisos.length === 0) {
-            container.innerHTML = '<p style="color: #999;">Sin compromisos para este mes</p>';
+        if (!compromisos || compromisos.length === 0) {
+            console.log('⚠️ Sin compromisos');
+            document.getElementById('estadosContent').innerHTML = '<p style="color: #999;">Sin compromisos para este mes</p>';
             return;
         }
         
-        container.innerHTML = compromisos.map(c => `
+        console.log('✅ Renderizando ' + compromisos.length + ' compromisos');
+        
+        const html = compromisos.map(c => `
             <div class="estado-item">
                 <div class="estado-label">
                     <strong>${c.cliente}</strong>
@@ -584,6 +591,12 @@ function cargarEstados() {
                 </div>
             </div>
         `).join('');
+        
+        document.getElementById('estadosContent').innerHTML = html;
+        console.log('✅ Estados cargados');
+    }).catch(err => {
+        console.error('❌ Error:', err);
+        document.getElementById('estadosContent').innerHTML = '<p style="color: red;">Error al cargar: ' + err + '</p>';
     });
 }
 
