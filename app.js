@@ -76,6 +76,10 @@ function showSection(sectionId) {
     if (sectionId === 'wbr') {
         cargarWBRHistorico();
     }
+    
+    if (sectionId === 'estados') {
+        cargarEstados();
+    }
 }
 
 // =======================================
