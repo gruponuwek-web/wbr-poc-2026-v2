@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WBR Sistema v2 - Gestión Comercial</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #ecf0f1;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .navbar h1 {
+            font-size: 24px;
+        }
+
+        .user-info {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .sidebar {
+            display: flex;
+            height: calc(100vh - 70px);
+        }
+
+        .menu {
+            background: #34495e;
+            color: white;
+            width: 250px;
+            padding: 20px 0;
+            overflow-y: auto;
+        }
+
+        .menu button {
+            width: 100%;
+            text-align: left;
+            padding: 15px 25px;
+            border: none;
+            background: none;
+            color: #ecf0f1;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+
+        .menu button:hover, .menu button.active {
+            background: #2c3e50;
+            border-left-color: #667eea;
+            color: #667eea;
+        }
+
+        .content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .section {
+            display: none;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 5px;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .btn-primary, .btn-success, .btn-danger, .btn-warning {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 10px;
+            margin-right: 10px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+
+        .message.success {
+            background: #d5f4e6;
+            color: #27ae60;
+            border-left: 4px solid #27ae60;
+        }
+
+        .message.error {
+            background: #fadbd8;
+            color: #e74c3c;
+            border-left: 4px solid #e74c3c;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .badge-activo {
+            background: #d5f4e6;
+            color: #27ae60;
+        }
+
+        .badge-pausado {
+            background: #fadbd8;
+            color: #e74c3c;
+        }
+
+        .badge-abierta {
+            background: #d6eaf8;
+            color: #3498db;
+        }
+
+        .badge-cerrada {
+            background: #f4ecf7;
+            color: #8e44ad;
+        }
+
+        .vendor-section {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border-left: 4px solid #667eea;
+        }
+
+        .vendor-section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .step {
+            background: white;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 1px solid #ecf0f1;
+        }
+
+        .step h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .compromise-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: #f9f9f9;
+            margin-bottom: 8px;
+            border-radius: 5px;
+        }
+
+        .compromise-item input[type="checkbox"] {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .compromise-item label {
+            cursor: pointer;
+            flex: 1;
+            margin: 0;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .info-card {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-card p {
+            margin: 5px 0;
+            color: #2c3e50;
+        }
+
+        .info-card strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <!-- NAVBAR -->
+    <div class="navbar">
+        <h1>📊 WBR Sistema v2 - Gestión Comercial</h1>
+        <div class="user-info">
+            <span id="userDisplay">Usuario: Cargando...</span>
+        </div>
+    </div>
+
+    <!-- SIDEBAR + CONTENT -->
+    <div class="sidebar">
+        <!-- MENU -->
+        <div class="menu">
+            <button class="menu-btn active" onclick="showSection('dashboard')">📈 Dashboard</button>
+            <button class="menu-btn" onclick="showSection('vendedores')">👥 Vendedores</button>
+            <button class="menu-btn" onclick="showSection('compromisos')">📋 Compromisos</button>
+            <button class="menu-btn" onclick="showSection('wbr')">📅 WBR</button>
+            <button class="menu-btn" onclick="showSection('acciones')">⚡ Acciones</button>
+        </div>
+
+        <!-- CONTENT -->
+        <div class="content">
+
+            <!-- DASHBOARD -->
+            <section id="dashboard" class="section active">
+                <h2>📈 Dashboard</h2>
+                <div id="dashboardContent" class="loading">Cargando datos...</div>
+            </section>
+
+            <!-- VENDEDORES -->
+            <section id="vendedores" class="section">
+                <h2>👥 Gestionar Vendedores</h2>
+                <div class="form-group">
+                    <label>Nuevo Vendedor:</label>
+                    <input type="text" id="nuevoVendedor" placeholder="Nombre del vendedor">
+                    <button class="btn-primary" onclick="agregarVendedor()">Agregar Vendedor</button>
+                </div>
+                <div id="vendedorMsg"></div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vendedorTableBody">
+                        <tr><td colspan="4" class="loading">Cargando vendedores...</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- COMPROMISOS -->
+            <section id="compromisos" class="section">
+                <h2>📋 Compromisos</h2>
+                <div class="form-group">
+                    <label>Mes:</label>
+                    <select id="compromiso_mes" onchange="cargarCompromisos()">
+                        <option value="Enero">Enero</option>
+                        <option value="Febrero">Febrero</option>
+                        <option value="Marzo">Marzo</option>
+                        <option value="Abril">Abril</option>
+                        <option value="Mayo">Mayo</option>
+                        <option value="Junio" selected>Junio</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Vendedor:</label>
+                    <select id="compromiso_vendedor"></select>
+                </div>
+                <div class="form-group">
+                    <label>Cliente:</label>
+                    <input type="text" id="compromiso_cliente" placeholder="Nombre del cliente">
+                </div>
+                <div class="form-group">
+                    <label>Clasificación:</label>
+                    <select id="compromiso_clasificacion">
+                        <option value="Prospección">Prospección</option>
+                        <option value="Crecimiento">Crecimiento</option>
+                        <option value="Recuperado">Recuperado</option>
+                    </select>
+                </div>
+                <button class="btn-success" onclick="agregarCompromiso()">Crear Compromiso</button>
+                <div id="compromisoMsg"></div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Vendedor</th>
+                            <th>Cliente</th>
+                            <th>Clasificación</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="compromisoTableBody">
+                        <tr><td colspan="5" class="loading">Cargando compromisos...</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- WBR SEMANAL -->
+            <section id="wbr" class="section">
+                <h2>📅 Weekly Business Review</h2>
+                
+                <div class="info-card">
+                    <p><strong>Semana Actual:</strong> <span id="semanaMostrada">-</span></p>
+                    <p><strong>Mes:</strong> <span id="mesMostrado">Junio</span></p>
+                    <p><strong>Estado:</strong> <span id="estadoWBR">-</span></p>
+                </div>
+
+                <button class="btn-primary" onclick="abrirWBR()">Abrir WBR</button>
+                <div id="wbrMsg"></div>
+
+                <!-- Contenedor de vendedores dinámico -->
+                <div id="vendedoresWBRContainer" style="margin-top: 20px;">
+                    <div class="loading">Cargue la WBR para ver vendedores</div>
+                </div>
+
+                <!-- Botón para cerrar WBR -->
+                <div id="cerrarWBRControles" style="display: none; margin-top: 25px; padding: 20px; background: #f9f9f9; border-radius: 8px; border: 2px solid #27ae60;">
+                    <h3>Finalizar WBR</h3>
+                    <p style="color: #666; margin-bottom: 15px;">Cuando completes todos los vendedores, cierra la sesión aquí.</p>
+                    <button class="btn-success" onclick="cerrarWBR()">✅ Guardar y Cerrar WBR</button>
+                    <button class="btn-warning" onclick="generarPDFWBR()">📄 Generar PDF</button>
+                </div>
+            </section>
+
+            <!-- ACCIONES -->
+            <section id="acciones" class="section">
+                <h2>⚡ Acciones de Seguimiento</h2>
+                <div class="form-group">
+                    <label>Mes:</label>
+                    <select id="accion_mes" onchange="cargarAcciones()">
+                        <option value="Junio" selected>Junio</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Semana:</label>
+                    <input type="number" id="accion_semana" min="1" max="4" value="1">
+                </div>
+                <div class="form-group">
+                    <label>Tipo:</label>
+                    <select id="accion_tipo">
+                        <option value="Tarea">Tarea</option>
+                        <option value="Llamada">Llamada</option>
+                        <option value="Reunión">Reunión</option>
+                        <option value="Email">Email</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Vendedor:</label>
+                    <select id="accion_vendedor"></select>
+                </div>
+                <div class="form-group">
+                    <label>Descripción:</label>
+                    <textarea id="accion_descripcion" placeholder="Detalle de la acción..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Responsable:</label>
+                    <input type="text" id="accion_responsable" placeholder="Nombre del responsable">
+                </div>
+                <div class="form-group">
+                    <label>Fecha de Vencimiento:</label>
+                    <input type="date" id="accion_fecha">
+                </div>
+                <button class="btn-success" onclick="agregarAccion()">Crear Acción</button>
+                <div id="accionMsg"></div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Vendedor</th>
+                            <th>Descripción</th>
+                            <th>Responsable</th>
+                            <th>Vencimiento</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="accionTableBody">
+                        <tr><td colspan="6" class="loading">Cargando acciones...</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
