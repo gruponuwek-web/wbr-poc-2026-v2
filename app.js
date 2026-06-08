@@ -551,8 +551,36 @@ function descargarPDFWBR(mes, semana) {
 }
 
 // =======================================
-// ESTADOS - GESTIÓN DE COMPROMISOS
+// TEST SIMPLE
 // =======================================
+
+function testActualizar() {
+    const id = document.getElementById('test_id').value.trim();
+    const estado = document.getElementById('test_estado').value;
+    
+    if (!id) {
+        mostrarMensaje('testMsg', 'Ingresa un ID', 'error');
+        return;
+    }
+    
+    console.log('🧪 TEST: Actualizando', id, '→', estado);
+    
+    llamarAppScript('actualizarEstadoCompromiso', {
+        idCompromiso: id,
+        completado: (estado === 'Completado').toString()
+    }).then(response => {
+        console.log('📤 Respuesta:', response);
+        
+        if (response.exito) {
+            mostrarMensaje('testMsg', '✅ ACTUALIZADO en Sheets. Verifica COMPROMISOS columna F', 'success');
+        } else {
+            mostrarMensaje('testMsg', '❌ Error: ' + response.mensaje, 'error');
+        }
+    }).catch(err => {
+        console.error('❌ Error:', err);
+        mostrarMensaje('testMsg', '❌ Fallo: ' + err, 'error');
+    });
+}
 
 function cargarEstados() {
     const mes = document.getElementById('estados_mes').value;
