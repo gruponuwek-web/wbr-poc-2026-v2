@@ -1,7 +1,6 @@
 // =======================================
-// WBR SISTEMA v2 - APP.JS
+// WBR SISTEMA v2 - APP.JS MEJORADO
 // =======================================
-// Toda la lógica en un solo archivo
 
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbypCXR2h_tN-IFtkZOf_Hx4w_CkAARa80_TUWTrPJxaCoqr09F2Wf5VKTruY80EYvq-/exec';
 
@@ -62,6 +61,27 @@ async function llamarAppScript(action, params = {}) {
 }
 
 // =======================================
+// UTILIDADES
+// =======================================
+
+function setLoadingButton(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    if (btn) {
+        btn.disabled = loading;
+    }
+}
+
+function mostrarMensaje(elementId, mensaje, tipo) {
+    const elemento = document.getElementById(elementId);
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${tipo}`;
+    messageDiv.textContent = mensaje;
+    elemento.innerHTML = '';
+    elemento.appendChild(messageDiv);
+    setTimeout(() => messageDiv.remove(), 4000);
+}
+
+// =======================================
 // SECCIONES
 // =======================================
 
@@ -98,7 +118,6 @@ function cargarVendedores() {
             });
         }
         
-        // Actualizar selects
         actualizarSelectVendedores(vendedores);
     });
 }
@@ -122,11 +141,17 @@ function agregarVendedor() {
         mostrarMensaje('vendedorMsg', 'Ingresa un nombre', 'error');
         return;
     }
+    
+    setLoadingButton('btnAgregarVendedor', true);
+    
     llamarAppScript('agregarVendedor', { nombre }).then(response => {
+        setLoadingButton('btnAgregarVendedor', false);
         if (response.exito) {
             mostrarMensaje('vendedorMsg', '✅ Vendedor agregado', 'success');
             document.getElementById('nuevoVendedor').value = '';
             cargarVendedores();
+        } else {
+            mostrarMensaje('vendedorMsg', '❌ Error al agregar vendedor', 'error');
         }
     });
 }
@@ -176,13 +201,18 @@ function agregarCompromiso() {
         return;
     }
 
+    setLoadingButton('btnAgregarCompromiso', true);
+    
     llamarAppScript('agregarCompromiso', { 
         mes, vendedor, cliente, clasificacion, usuario: usuarioActual 
     }).then(response => {
+        setLoadingButton('btnAgregarCompromiso', false);
         if (response.exito) {
             mostrarMensaje('compromisoMsg', '✅ Compromiso agregado', 'success');
             document.getElementById('compromiso_cliente').value = '';
             cargarCompromisos();
+        } else {
+            mostrarMensaje('compromisoMsg', '❌ Error al agregar compromiso', 'error');
         }
     });
 }
@@ -206,7 +236,7 @@ function loadDashboard() {
             resumen[c.clasificacion]++;
         });
         
-        html += `<div class="grid-2">
+        html += `<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 20px;">
             <div class="info-card">
                 <strong>🔍 Prospección</strong>
                 <p style="font-size: 28px; color: #27ae60; font-weight: bold; margin-top: 10px;">${resumen['Prospección']}</p>
@@ -226,79 +256,160 @@ function loadDashboard() {
 }
 
 // =======================================
-// WBR
+// WBR CON TABS
 // =======================================
 
 function abrirWBR() {
     const semana = semanaActual;
+    
+    setLoadingButton('btnAbrirWBR', true);
     
     llamarAppScript('abrirWBR', { 
         mes: mesActual, 
         semana: semana, 
         usuario: usuarioActual 
     }).then(response => {
+        setLoadingButton('btnAbrirWBR', false);
         if (response.exito) {
             wbrAbierta = true;
             mostrarMensaje('wbrMsg', '✅ WBR abierta', 'success');
             document.getElementById('estadoWBR').textContent = 'ABIERTA';
             document.getElementById('cerrarWBRControles').style.display = 'block';
-            cargarWBRConVendedores();
+            cargarWBRConTabs();
+        } else {
+            mostrarMensaje('wbrMsg', '❌ Error al abrir WBR', 'error');
         }
     });
 }
 
-function cargarWBRConVendedores() {
+function cargarWBRConTabs() {
     const semana = semanaActual;
     const mes = mesActual;
     
-    // Cargar todos los vendedores y sus compromisos
-    const container = document.getElementById('vendedoresWBRContainer');
-    container.innerHTML = '<div class="loading">Cargando vendedores...</div>';
+    // Mostrar contenedor de tabs
+    document.getElementById('wbrTabsContainer').style.display = 'block';
     
-    llamarAppScript('obtenerCompromisosPorVendedor', { mes, vendedor: '' }).then(() => {
-        let html = '';
+    // Crear tabs
+    const tabsContainer = document.getElementById('wbrTabs');
+    const contentContainer = document.getElementById('wbrVendedoresContent');
+    
+    tabsContainer.innerHTML = '';
+    contentContainer.innerHTML = '';
+    
+    let firstTab = true;
+    
+    vendedoresData.forEach((vendedor, idx) => {
+        if (vendedor.estado === 'Activo') {
+            // Crear tab
+            const tab = document.createElement('button');
+            tab.className = `wbr-tab ${firstTab ? 'active' : ''}`;
+            tab.textContent = vendedor.nombre;
+            tab.onclick = () => mostrarVendedorTab(vendedor.id);
+            tabsContainer.appendChild(tab);
+            
+            // Crear contenido
+            const vendorContent = document.createElement('div');
+            vendorContent.id = `vendor_${vendedor.id}`;
+            vendorContent.className = `vendor-content ${firstTab ? 'active' : ''}`;
+            vendorContent.innerHTML = generarSectionVendedor(vendedor, semana, mes);
+            contentContainer.appendChild(vendorContent);
+            
+            firstTab = false;
+        }
+    });
+    
+    // Cargar compromisos para el primer vendedor
+    if (vendedoresData.length > 0) {
+        const primerVendedor = vendedoresData.find(v => v.estado === 'Activo');
+        if (primerVendedor) {
+            cargarCompromisosDelVendedor(primerVendedor.nombre, mes);
+        }
+    }
+}
+
+function mostrarVendedorTab(vendedorId) {
+    // Ocultar todos
+    document.querySelectorAll('.vendor-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.wbr-tab').forEach(el => el.classList.remove('active'));
+    
+    // Mostrar seleccionado
+    const vendorElement = document.getElementById(`vendor_${vendedorId}`);
+    const tabButtons = document.querySelectorAll('.wbr-tab');
+    
+    const vendedor = vendedoresData.find(v => v.id === vendedorId);
+    if (vendedor && vendorElement) {
+        vendorElement.classList.add('active');
         
-        vendedoresData.forEach(vendedor => {
-            if (vendedor.estado === 'Activo') {
-                html += generarSectionVendedor(vendedor, semana, mes);
+        // Activar tab correspondiente
+        tabButtons.forEach(btn => {
+            if (btn.textContent === vendedor.nombre) {
+                btn.classList.add('active');
             }
         });
         
-        container.innerHTML = html;
-        
-        // Agregar event listeners a los checkboxes
-        document.querySelectorAll('.compromise-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', (e) => {
-                const vendedor = e.target.getAttribute('data-vendedor');
-                const idCompromiso = e.target.getAttribute('data-compromiso');
-                const completado = e.target.checked;
-                guardarEstadoCompromiso(mes, semana, vendedor, idCompromiso, completado);
-            });
-        });
+        // Cargar compromisos si aún no están
+        const compromisosContainer = vendorElement.querySelector(`#compromisos_${vendedorId}`);
+        if (compromisosContainer && compromisosContainer.textContent.includes('Cargando')) {
+            cargarCompromisosDelVendedor(vendedor.nombre, mesActual);
+        }
+    }
+}
+
+function cargarCompromisosDelVendedor(vendedorNombre, mes) {
+    llamarAppScript('obtenerCompromisosPorVendedor', { mes, vendedor: vendedorNombre }).then(compromisos => {
+        const vendedor = vendedoresData.find(v => v.nombre === vendedorNombre);
+        if (vendedor) {
+            const container = document.querySelector(`#compromisos_${vendedor.id}`);
+            if (container) {
+                if (compromisos.length === 0) {
+                    container.innerHTML = '<p style="color: #999;">Sin compromisos este mes</p>';
+                } else {
+                    container.innerHTML = compromisos.map(c => `
+                        <div class="compromise-item">
+                            <input type="checkbox" class="compromise-checkbox" 
+                                data-vendedor="${vendedorNombre}" 
+                                data-compromiso="${c.id}"
+                                ${c.estado === 'Completado' ? 'checked' : ''}>
+                            <label><strong>${c.cliente}</strong> - ${c.clasificacion}</label>
+                        </div>
+                    `).join('');
+                    
+                    // Agregar event listeners
+                    container.querySelectorAll('.compromise-checkbox').forEach(checkbox => {
+                        checkbox.addEventListener('change', (e) => {
+                            const vendedor = e.target.getAttribute('data-vendedor');
+                            const idCompromiso = e.target.getAttribute('data-compromiso');
+                            const completado = e.target.checked;
+                            console.log(`Compromiso ${idCompromiso}: ${completado}`);
+                        });
+                    });
+                }
+            }
+        }
     });
 }
 
 function generarSectionVendedor(vendedor, semana, mes) {
-    const vendedorNombre = vendedor.nombre;
+    const vendedorId = vendedor.id;
     
     return `
-    <div class="vendor-section">
-        <h3>👤 ${vendedorNombre}</h3>
-        
         <div class="step">
             <h4>PASO 1: Compromisos del Mes</h4>
-            <div id="compromisos_${vendedor.id}" class="loading">Cargando compromisos...</div>
+            <div id="compromisos_${vendedorId}" class="loading">
+                <div class="spinner"></div>
+                Cargando compromisos...
+            </div>
         </div>
         
         <div class="step">
             <h4>PASO 2: Descubrimientos y Retos</h4>
             <div class="form-group">
                 <label>Descubrimientos:</label>
-                <textarea id="descubrimientos_${vendedor.id}" placeholder="¿Qué descubriste esta semana?"></textarea>
+                <textarea id="descubrimientos_${vendedorId}" placeholder="¿Qué descubriste esta semana?"></textarea>
             </div>
             <div class="form-group">
                 <label>Retos:</label>
-                <textarea id="retos_${vendedor.id}" placeholder="¿Qué retos enfrentaste?"></textarea>
+                <textarea id="retos_${vendedorId}" placeholder="¿Qué retos enfrentaste?"></textarea>
             </div>
         </div>
         
@@ -306,49 +417,36 @@ function generarSectionVendedor(vendedor, semana, mes) {
             <h4>PASO 3: Actividades de Seguimiento</h4>
             <div class="form-group">
                 <label>Actividades para la próxima semana:</label>
-                <textarea id="actividades_${vendedor.id}" placeholder="¿Qué actividades realizarás?"></textarea>
+                <textarea id="actividades_${vendedorId}" placeholder="¿Qué actividades realizarás?"></textarea>
             </div>
         </div>
-    </div>
     `;
-}
-
-function guardarEstadoCompromiso(mes, semana, vendedor, idCompromiso, completado) {
-    // Esta función se llamará cuando cambie un checkbox
-    // Por ahora solo guarda el estado localmente, se sincroniza al cerrar WBR
-    console.log(`Compromiso ${idCompromiso} para ${vendedor}: ${completado}`);
 }
 
 function cerrarWBR() {
     const semana = semanaActual;
     
-    // Guardar todos los detalles de vendedores
-    vendedoresData.forEach(vendedor => {
-        if (vendedor.estado === 'Activo') {
-            const descubrimientos = document.getElementById(`descubrimientos_${vendedor.id}`)?.value || '';
-            const retos = document.getElementById(`retos_${vendedor.id}`)?.value || '';
-            const actividades = document.getElementById(`actividades_${vendedor.id}`)?.value || '';
-            
-            // Aquí irían las llamadas para guardar los detalles
-            console.log(`Guardando detalles de ${vendedor.nombre}`);
-        }
-    });
+    setLoadingButton('btnCerrarWBR', true);
     
     llamarAppScript('cerrarWBR', { 
         mes: mesActual, 
         semana: semana 
     }).then(response => {
+        setLoadingButton('btnCerrarWBR', false);
         if (response.exito) {
             wbrAbierta = false;
             mostrarMensaje('wbrMsg', '✅ WBR cerrada correctamente', 'success');
             document.getElementById('estadoWBR').textContent = 'CERRADA';
             document.getElementById('cerrarWBRControles').style.display = 'none';
+            document.getElementById('wbrTabsContainer').style.display = 'none';
+        } else {
+            mostrarMensaje('wbrMsg', '❌ Error al cerrar WBR', 'error');
         }
     });
 }
 
 function generarPDFWBR() {
-    const elemento = document.getElementById('vendedoresWBRContainer');
+    const elemento = document.getElementById('wbrVendedoresContent');
     const opt = {
         margin: 10,
         filename: `WBR_Semana_${semanaActual}_${mesActual}.pdf`,
@@ -400,28 +498,19 @@ function agregarAccion() {
         return;
     }
 
+    setLoadingButton('btnAgregarAccion', true);
+    
     llamarAppScript('agregarAccion', { 
         mes, semana, tipo, vendedor, descripcion, responsable, fecha, usuario: usuarioActual 
     }).then(response => {
+        setLoadingButton('btnAgregarAccion', false);
         if (response.exito) {
             mostrarMensaje('accionMsg', '✅ Acción creada', 'success');
             document.getElementById('accion_descripcion').value = '';
             document.getElementById('accion_responsable').value = '';
             cargarAcciones();
+        } else {
+            mostrarMensaje('accionMsg', '❌ Error al crear acción', 'error');
         }
     });
-}
-
-// =======================================
-// UTILIDADES
-// =======================================
-
-function mostrarMensaje(elementId, mensaje, tipo) {
-    const elemento = document.getElementById(elementId);
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${tipo}`;
-    messageDiv.textContent = mensaje;
-    elemento.innerHTML = '';
-    elemento.appendChild(messageDiv);
-    setTimeout(() => messageDiv.remove(), 4000);
 }
