@@ -605,12 +605,16 @@ function cambiarEstado(idCompromiso, nuevoEstado) {
 }
 
 function guardarEstados() {
+    console.log('💾 INICIO guardarEstados');
+    console.log('📦 estadosCambiados:', window.estadosCambiados);
+    
     if (!window.estadosCambiados || Object.keys(window.estadosCambiados).length === 0) {
+        console.log('⚠️ No hay cambios para guardar');
         mostrarMensaje('estadosMsg', 'No hay cambios para guardar', 'error');
         return;
     }
     
-    console.log('💾 Guardando estados:', window.estadosCambiados);
+    console.log('🔄 Guardando ' + Object.keys(window.estadosCambiados).length + ' cambios');
     
     setLoadingButton('btnGuardarEstados', true);
     
@@ -618,6 +622,8 @@ function guardarEstados() {
     for (const idComp in window.estadosCambiados) {
         const nuevoEstado = window.estadosCambiados[idComp];
         const completado = nuevoEstado === 'Completado';
+        
+        console.log('  📝 Actualizando:', idComp, '→', nuevoEstado);
         
         const promesa = llamarAppScript('actualizarEstadoCompromiso', {
             idCompromiso: idComp,
@@ -627,22 +633,26 @@ function guardarEstados() {
         promesas.push(promesa);
     }
     
+    console.log('⏳ Esperando ' + promesas.length + ' promesas...');
+    
     Promise.all(promesas).then(resultados => {
         console.log('✅ Respuestas:', resultados);
         setLoadingButton('btnGuardarEstados', false);
         
         const exitosos = resultados.filter(r => r.exito).length;
         if (exitosos === resultados.length) {
+            console.log('🎉 ÉXITO: ' + exitosos + ' actualizados');
             mostrarMensaje('estadosMsg', `✅ ${exitosos} compromisos actualizados`, 'success');
             window.estadosCambiados = {};
             cargarEstados();
         } else {
+            console.log('⚠️ PARCIAL: ' + exitosos + '/' + resultados.length);
             mostrarMensaje('estadosMsg', `⚠️ ${exitosos}/${resultados.length} actualizados`, 'error');
         }
     }).catch(err => {
-        console.error('❌ Error:', err);
+        console.error('❌ ERROR EN PROMISE.ALL:', err);
         setLoadingButton('btnGuardarEstados', false);
-        mostrarMensaje('estadosMsg', '❌ Error al guardar: ' + err, 'error');
+        mostrarMensaje('estadosMsg', '❌ Error: ' + err, 'error');
     });
 }
 
