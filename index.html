@@ -248,15 +248,20 @@
             <!-- ESTADOS - NUEVA SECCIÓN -->
             <section id="estados" class="section">
                 <h2>✅ Gestión de Estados - Compromisos</h2>
-                <div class="form-group">
-                    <label>Mes:</label>
-                    <select id="estados_mes" onchange="cargarEstados()">
-                        <option value="Junio" selected>Junio</option>
-                        <option value="Julio">Julio</option>
-                        <option value="Agosto">Agosto</option>
-                    </select>
+                <div class="form-group inline">
+                    <div style="flex: 1;">
+                        <label>Mes:</label>
+                        <select id="estados_mes">
+                            <option value="Junio" selected>Junio</option>
+                            <option value="Julio">Julio</option>
+                            <option value="Agosto">Agosto</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: flex-end; flex: 0.5;">
+                        <button class="btn-info" onclick="cargarEstados()" style="margin: 0; width: 100%;">📂 Cargar</button>
+                    </div>
                 </div>
-                <div id="estadosContent" class="loading"><div class="spinner"></div>Cargando compromisos...</div>
+                <div id="estadosContent" class="loading"><div class="spinner"></div>Selecciona un mes y haz click en "Cargar"</div>
                 <button class="btn-success" id="btnGuardarEstados" onclick="guardarEstados()" style="margin-top: 20px;">Guardar Cambios</button>
                 <div id="estadosMsg"></div>
             </section>
