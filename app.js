@@ -428,20 +428,70 @@ function cerrarWBR() {
     
     setLoadingButton('btnCerrarWBR', true);
     
-    llamarAppScript('cerrarWBR', { 
-        mes: mesActual, 
-        semana: semana 
-    }).then(response => {
-        setLoadingButton('btnCerrarWBR', false);
-        if (response.exito) {
-            wbrAbierta = false;
-            mostrarMensaje('wbrMsg', '✅ WBR cerrada correctamente', 'success');
-            document.getElementById('estadoWBR').textContent = 'CERRADA';
-            document.getElementById('cerrarWBRControles').style.display = 'none';
-            document.getElementById('wbrTabsContainer').style.display = 'none';
-        } else {
-            mostrarMensaje('wbrMsg', '❌ Error al cerrar WBR', 'error');
+    // Primero: Guardar todos los detalles de cada vendedor
+    const promesasGuardar = [];
+    
+    vendedoresData.forEach(vendedor => {
+        if (vendedor.estado === 'Activo') {
+            const vendedorId = vendedor.id;
+            const descubrimientos = document.getElementById(`descubrimientos_${vendedorId}`)?.value || '';
+            const retos = document.getElementById(`retos_${vendedorId}`)?.value || '';
+            const actividades = document.getElementById(`actividades_${vendedorId}`)?.value || '';
+            
+            // Obtener estado de compromisos
+            const compromisosCheckboxes = document.querySelectorAll(
+                `.compromise-checkbox[data-vendedor="${vendedor.nombre}"]`
+            );
+            
+            compromisosCheckboxes.forEach(checkbox => {
+                const idCompromiso = checkbox.getAttribute('data-compromiso');
+                const completado = checkbox.checked;
+                const descripcion = checkbox.parentElement.querySelector('label').textContent;
+                const clasificacion = descripcion.includes('Prospección') ? 'Prospección' : 
+                                    descripcion.includes('Crecimiento') ? 'Crecimiento' : 'Recuperado';
+                
+                // Guardar cada detalle
+                const promesa = llamarAppScript('guardarWBRDetalle', {
+                    mes: mesActual,
+                    semana: semana,
+                    vendedor: vendedor.nombre,
+                    idCompromiso: idCompromiso,
+                    descripcion: descripcion,
+                    clasificacion: clasificacion,
+                    completado: completado.toString(),
+                    descubrimientos: descubrimientos,
+                    retos: retos,
+                    actividades: actividades,
+                    usuario: usuarioActual
+                });
+                
+                promesasGuardar.push(promesa);
+            });
         }
+    });
+    
+    // Esperar a que se guarden todos los detalles
+    Promise.all(promesasGuardar).then(() => {
+        // Luego: Cerrar la WBR
+        llamarAppScript('cerrarWBR', { 
+            mes: mesActual, 
+            semana: semana 
+        }).then(response => {
+            setLoadingButton('btnCerrarWBR', false);
+            if (response.exito) {
+                wbrAbierta = false;
+                mostrarMensaje('wbrMsg', '✅ WBR cerrada y datos guardados', 'success');
+                document.getElementById('estadoWBR').textContent = 'CERRADA';
+                document.getElementById('cerrarWBRControles').style.display = 'none';
+                document.getElementById('wbrTabsContainer').style.display = 'none';
+            } else {
+                mostrarMensaje('wbrMsg', '❌ Error al cerrar WBR', 'error');
+            }
+        });
+    }).catch(error => {
+        setLoadingButton('btnCerrarWBR', false);
+        mostrarMensaje('wbrMsg', '❌ Error al guardar detalles', 'error');
+        console.error('Error:', error);
     });
 }
 
