@@ -181,7 +181,8 @@
             <button class="menu-btn active" onclick="showSection('dashboard')">📈 Dashboard</button>
             <button class="menu-btn" onclick="showSection('vendedores')">👥 Vendedores</button>
             <button class="menu-btn" onclick="showSection('compromisos')">📋 Compromisos</button>
-            <button class="menu-btn" onclick="showSection('test')">🧪 Test</button>
+            <button class="menu-btn" onclick="showSection('test')">🧪 Test Estado</button>
+            <button class="menu-btn" onclick="showSection('testdesc')">📝 Test Desc/Retos</button>
             <button class="menu-btn" onclick="showSection('estados')">✅ Estados</button>
             <button class="menu-btn" onclick="showSection('wbr')">📅 WBR</button>
             <button class="menu-btn" onclick="showSection('acciones')">⚡ Acciones</button>
@@ -228,7 +229,35 @@
                 </table>
             </section>
 
-            <!-- ESTADOS - NUEVA SECCIÓN -->
+            <!-- TEST DESC/RETOS -->
+            <section id="testdesc" class="section">
+                <h2>📝 Test Simple - Guardar Descubrimientos/Retos</h2>
+                <div class="form-group inline">
+                    <div>
+                        <label>Mes:</label>
+                        <select id="testdesc_mes">
+                            <option value="Junio">Junio</option>
+                            <option value="Julio">Julio</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Semana (1-52):</label>
+                        <input type="number" id="testdesc_semana" min="1" max="52" value="23" placeholder="23">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Vendedor:</label>
+                    <select id="testdesc_vendedor">
+                        <option value="">-- Cargando --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Descubrimientos y Retos:</label>
+                    <textarea id="testdesc_texto" placeholder="Escribe aquí..." style="min-height: 150px;"></textarea>
+                </div>
+                <button class="btn-success" onclick="testDescGuardar()">Guardar AHORA</button>
+                <div id="testdescMsg" style="margin-top: 15px;"></div>
+            </section>
             <section id="test" class="section">
                 <h2>🧪 Test Simple - Actualizar 1 Compromiso</h2>
                 <div class="form-group">
