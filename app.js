@@ -577,18 +577,11 @@ function cargarEstados() {
                     <strong>${c.cliente}</strong>
                     <small>${c.vendedor} • ${c.clasificacion}</small>
                 </div>
-                <div class="estado-buttons">
-                    <button class="btn-estado ${c.estado === 'Completado' ? 'completado' : ''}" 
-                            onclick="seleccionarEstado('${c.id}', 'Completado')" 
-                            data-estado="${c.id}">
-                        ✓
-                    </button>
-                    <button class="btn-estado ${c.estado === 'No Completado' ? 'nocompletado' : ''}" 
-                            onclick="seleccionarEstado('${c.id}', 'No Completado')" 
-                            data-estado="${c.id}">
-                        ✗
-                    </button>
-                </div>
+                <select class="estado-select" id="select_${c.id}" onchange="cambiarEstado('${c.id}', this.value)">
+                    <option value="Pendiente" ${c.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                    <option value="Completado" ${c.estado === 'Completado' ? 'selected' : ''}>✓ Completado</option>
+                    <option value="No Completado" ${c.estado === 'No Completado' ? 'selected' : ''}>✗ No Completado</option>
+                </select>
             </div>
         `).join('');
         
@@ -600,32 +593,15 @@ function cargarEstados() {
     });
 }
 
-function seleccionarEstado(idCompromiso, nuevoEstado) {
-    console.log('🔵 seleccionarEstado:', idCompromiso, nuevoEstado);
+function cambiarEstado(idCompromiso, nuevoEstado) {
+    console.log('🔄 cambiarEstado:', idCompromiso, '→', nuevoEstado);
     
-    // Deseleccionar todos los botones de este compromiso
-    const botones = document.querySelectorAll(`[data-estado="${idCompromiso}"]`);
-    botones.forEach(btn => {
-        btn.classList.remove('completado', 'nocompletado');
-    });
-    
-    // Seleccionar el botón que se hizo click (ahora es el currentTarget)
-    if (event && event.currentTarget) {
-        if (nuevoEstado === 'Completado') {
-            event.currentTarget.classList.add('completado');
-        } else {
-            event.currentTarget.classList.add('nocompletado');
-        }
-    }
-    
-    // Guardar el cambio
     if (!window.estadosCambiados) {
         window.estadosCambiados = {};
     }
     window.estadosCambiados[idCompromiso] = nuevoEstado;
     
-    console.log('✅ Guardado en memoria:', idCompromiso, '→', nuevoEstado);
-    console.log('📊 Total cambios:', Object.keys(window.estadosCambiados).length);
+    console.log('✅ Guardado en memoria. Total cambios:', Object.keys(window.estadosCambiados).length);
 }
 
 function guardarEstados() {
