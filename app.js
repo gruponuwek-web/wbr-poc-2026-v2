@@ -238,7 +238,7 @@ function cargarVendedoresWBR(mes, semana) {
             `;
             container.innerHTML += acordeon;
             cargarCompromisosWBR(mes, vendedor.nombre, vendedor.id);
-            cargarAccionesWBR(mes, vendedor.id);
+            cargarAccionesWBR(mes, vendedor.id, vendedor.nombre);
         });
     });
 }
@@ -280,10 +280,14 @@ function toggleCompromiso(idCompromiso, selectElement) {
     selectElement.classList.add(nuevoEstado.toLowerCase().replace(' ', '-'));
 }
 
-function cargarAccionesWBR(mes, vendedorId) {
+function cargarAccionesWBR(mes, vendedorId, vendedorNombre) {
     llamarAppScript('obtenerAcciones', { mes }).then(acciones => {
-        // FILTRAR: solo NO completadas
-        const filtradas = acciones.filter(a => a.estado !== 'COMPLETADO' && a.estado !== 'Completado');
+        // FILTRAR: solo del vendedor seleccionado y NO completadas
+        const filtradas = acciones.filter(a => 
+            a.vendedor === vendedorNombre && 
+            a.estado !== 'COMPLETADO' && 
+            a.estado !== 'Completado'
+        );
         
         if (filtradas.length === 0) {
             document.getElementById('paso3-' + vendedorId).innerHTML = '<p style="color: #999; margin-top: 10px;">Sin acciones pendientes</p>';
@@ -368,7 +372,7 @@ function guardarAccion() {
     }).then(response => {
         if (response.exito) {
             cerrarModalAccion();
-            cargarAccionesWBR(mesActual, vendedorModalId);
+            cargarAccionesWBR(mesActual, vendedorModalId, vendedorModalNombre);
             alert('Acción guardada ✅');
         }
     });
@@ -414,30 +418,14 @@ function guardarVendedorWBR(vendedorId, vendedorNombre, mes, semana) {
     console.log('✅ ID del textarea:', textareaId);
     console.log('✅ Contenido:', descubrimientos);
     
-    // PASO 4: RECOPILAR ACCIONES
+    // PASO 4: RECOPILAR ACCIONES - NO SE GUARDAN EN WBR, SOLO SE VISUALIZAN
     console.log('');
     console.log('═══════════════════════════════════════════════════════');
-    console.log('🔵 PASO 4: BUSCANDO TABLA DE ACCIONES');
+    console.log('🔵 PASO 4: ACCIONES - SOLO VISUALIZACIÓN (NO SE GUARDAN)');
     console.log('═══════════════════════════════════════════════════════');
     
-    const paso3Table = document.querySelector(`[data-vendedor-id="${vendedorId}"] .wbr-tabla tbody`);
-    const acciones = [];
-    
-    if (paso3Table) {
-        console.log('✅ Tabla encontrada');
-        paso3Table.querySelectorAll('tr').forEach((row, idx) => {
-            const accion = {
-                tipo: row.cells[0]?.textContent,
-                descripcion: row.cells[1]?.textContent,
-                vencimiento: row.cells[2]?.textContent,
-                responsable: row.cells[3]?.textContent
-            };
-            console.log(`  Acción ${idx}:`, accion);
-            acciones.push(accion);
-        });
-    } else {
-        console.log('⚠️ Tabla NO encontrada');
-    }
+    // Las acciones se agregan mediante el botón "Agregar Acción"
+    // No se envían al guardar WBR
     
     // PASO 5: ENVIAR A APPSCRIPT
     console.log('');
@@ -451,7 +439,7 @@ function guardarVendedorWBR(vendedorId, vendedorNombre, mes, semana) {
         vendedor: vendedorNombre,
         estadosCompromisos: JSON.stringify(estadosCompromisos),
         descubrimientos: descubrimientos,
-        acciones: JSON.stringify(acciones),
+        acciones: JSON.stringify([]), // VACÍO - Las acciones se guardan directamente con "Agregar Acción"
         usuario: usuarioActual
     };
     
@@ -461,7 +449,7 @@ function guardarVendedorWBR(vendedorId, vendedorNombre, mes, semana) {
     console.log('  vendedor:', datosAEnviar.vendedor);
     console.log('  estadosCompromisos:', datosAEnviar.estadosCompromisos);
     console.log('  descubrimientos:', datosAEnviar.descubrimientos);
-    console.log('  acciones:', datosAEnviar.acciones);
+    console.log('  acciones: VACÍO (se guardan con Agregar Acción)');
     console.log('  usuario:', datosAEnviar.usuario);
     
     llamarAppScript('guardarWBRCompleto', datosAEnviar).then(response => {
