@@ -80,34 +80,20 @@
                         <select id="compromiso_vendedor"></select>
                     </div>
                 </div>
-                <div class="form-group inline">
-                    <div>
-                        <label>Cliente:</label>
-                        <input type="text" id="compromiso_cliente" placeholder="Nombre o código de cliente">
-                    </div>
-                    <div>
-                        <label>Clasificación:</label>
-                        <select id="compromiso_clasificacion">
-                            <option value="Prospección">Prospección</option>
-                            <option value="Crecimiento">Crecimiento</option>
-                            <option value="Recuperado">Recuperado</option>
-                        </select>
-                    </div>
+                <div class="form-group">
+                    <label>Cliente:</label>
+                    <input type="text" id="compromiso_cliente" placeholder="Nombre del cliente">
+                </div>
+                <div class="form-group">
+                    <label>Clasificación:</label>
+                    <select id="compromiso_clasificacion">
+                        <option value="A">A - Crítico</option>
+                        <option value="B">B - Importante</option>
+                        <option value="C">C - Regular</option>
+                    </select>
                 </div>
                 <button class="btn-success" onclick="agregarCompromiso()">Guardar Compromiso</button>
                 <div id="compromisoMsg"></div>
-
-                <h3 style="margin-top: 30px;">📋 Compromisos</h3>
-                <div class="form-group">
-                    <label>Filtrar por Estado:</label>
-                    <select id="compromiso_filtro_estado" onchange="cargarCompromisos()">
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="Completado">Completado</option>
-                        <option value="No Completado">No Completado</option>
-                        <option value="Todos">Todos</option>
-                    </select>
-                </div>
-
                 <table>
                     <thead>
                         <tr><th>ID</th><th>Mes</th><th>Vendedor</th><th>Cliente</th><th>Clasificación</th><th>Estado</th></tr>
@@ -241,9 +227,52 @@
 
             <!-- WBR -->
             <section id="wbr" class="section">
-                <h2>📅 Weekly Business Review</h2>
-                <div id="wbrMsg"></div>
-                <div id="wbrAccordionContainer" class="wbr-accordion"></div>
+                <div class="wbr-container">
+                    <!-- TABS -->
+                    <div class="wbr-tabs">
+                        <button class="wbr-tab active" id="tab-nueva-sesion" onclick="mostrarTab('nueva-sesion')">
+                            📅 Nueva sesión
+                        </button>
+                        <button class="wbr-tab" id="tab-historial" onclick="mostrarTab('historial')">
+                            📋 Historial
+                        </button>
+                    </div>
+
+                    <!-- HEADER -->
+                    <div class="wbr-header">
+                        <div class="wbr-info">
+                            <span class="wbr-mes" id="wbr-mes-display">Junio</span>
+                            <span class="wbr-separator">|</span>
+                            <span class="wbr-semana" id="wbr-semana-display"># Semana 24 de 52</span>
+                        </div>
+                        <button class="btn-success" id="btn-crear-wbr" onclick="crearNuevaWBR()">
+                            ➕ Crear Sesión
+                        </button>
+                    </div>
+
+                    <!-- CONTENIDO: NUEVA SESIÓN -->
+                    <div class="wbr-content" id="contenido-nueva-sesion">
+                        <div class="wbr-sesion-header">
+                            <h3 id="wbr-titulo-sesion">WBR - Junio Semana 24</h3>
+                            <button class="btn-danger" id="btn-cerrar-wbr" onclick="cerrarWBR()" style="display: none;">
+                                🔒 Cerrar Sesión
+                            </button>
+                        </div>
+
+                        <!-- ACORDEONES DE VENDEDORES -->
+                        <div id="wbr-vendedores-container" class="wbr-vendedores">
+                            <!-- Se generan dinámicamente -->
+                        </div>
+                    </div>
+
+                    <!-- CONTENIDO: HISTORIAL -->
+                    <div class="wbr-content" id="contenido-historial" style="display: none;">
+                        <h3>📋 Historial de Sesiones WBR</h3>
+                        <div id="wbr-historial-list" class="wbr-historial-list">
+                            <!-- Se generan dinámicamente -->
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- ACCIONES -->
