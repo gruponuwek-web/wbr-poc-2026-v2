@@ -388,15 +388,41 @@ function renderizarSesionesNuevo(sesiones) {
         
         contenidoActiva.appendChild(botonesDiv);
         
-        // Aquí irán los datos de la sesión (placeholder por ahora)
+        // Aquí irán los datos de la sesión y los 3 pasos
         const datosDiv = document.createElement('div');
+        
+        // Mostrar info de la sesión
         datosDiv.innerHTML = `
-            <p style="color: #666; font-size: 13px;">
+            <p style="color: #666; font-size: 13px; margin-bottom: 20px;">
                 <strong>Abierta:</strong> ${sesionActual.fecha_apertura || 'No especificada'}<br/>
                 <strong>Estado:</strong> ${sesionActual.estado}
             </p>
         `;
+        
+        // Aquí irán los 3 pasos para cada vendedor
+        const stepsContainer = document.createElement('div');
+        stepsContainer.id = `wbr-steps-${sesionActual.semana}`;
+        datosDiv.appendChild(stepsContainer);
+        
+        // Botón guardar
+        const btnGuardar = document.createElement('button');
+        btnGuardar.textContent = '💾 Guardar Cambios';
+        btnGuardar.style.padding = '10px 20px';
+        btnGuardar.style.background = '#27ae60';
+        btnGuardar.style.color = 'white';
+        btnGuardar.style.border = 'none';
+        btnGuardar.style.borderRadius = '4px';
+        btnGuardar.style.cursor = 'pointer';
+        btnGuardar.style.fontWeight = 'bold';
+        btnGuardar.style.marginTop = '20px';
+        btnGuardar.id = 'btnGuardarWBR';
+        btnGuardar.onclick = () => guardarWBRCompleta();
+        datosDiv.appendChild(btnGuardar);
+        
         contenidoActiva.appendChild(datosDiv);
+        
+        // Cargar los 3 pasos para cada vendedor
+        cargarTresPasosEnAcordeon(sesionActual.mes, sesionActual.semana, stepsContainer);
         
         // Toggle para abrir/cerrar
         headerActiva.onclick = () => {
@@ -498,7 +524,25 @@ function renderizarSesionesNuevo(sesiones) {
 // FORMULARIO WBR EN MODAL
 // =======================================
 
-function abrirFormularioWBR(mes, semana) {
+function cargarTresPasosEnAcordeon(mes, semana, container) {
+    wbrActualEditando = { mes, semana };
+    
+    let html = '';
+    vendedoresData.forEach(vendedor => {
+        if (vendedor.estado === 'Activo') {
+            html += generarSeccionVendedor(vendedor, mes, semana);
+        }
+    });
+    
+    container.innerHTML = html;
+    
+    // Cargar compromisos para cada vendedor
+    vendedoresData.forEach(v => {
+        if (v.estado === 'Activo') {
+            cargarCompromisosEnForm(v.nombre, mes);
+        }
+    });
+}
     wbrActualEditando = { mes, semana };
     
     const modal = document.getElementById('wbrFormModal');
