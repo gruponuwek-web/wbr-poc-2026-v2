@@ -305,7 +305,7 @@ function generarAcordeones() {
     // Crear grid para las sesiones
     const grid = document.createElement('div');
     grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
+    grid.style.gridTemplateColumns = 'repeat(' + semanasDelMes + ', 1fr)';
     grid.style.gap = '20px';
     
     // Obtener número de semanas del mes
@@ -395,66 +395,197 @@ function abrirSesionWBR(mes, semana) {
     vendedoresSection.innerHTML = `
         <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 style="color: #2c3e50; margin: 0;">Sesión: ${mes} - Semana ${semana}</h3>
+                <h3 style="color: #2c3e50; margin: 0;">📅 ${mes} - Semana ${semana}</h3>
                 <button onclick="cerrarVendedoresWBR()" style="padding: 10px 20px; background: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">← Volver</button>
             </div>
             <div id="wbrVendedoresAccordion" style="display: flex; flex-direction: column; gap: 15px;"></div>
         </div>
     `;
     
-    // Generar acordeones de vendedores
-    const accordion = document.getElementById('wbrVendedoresAccordeon');
-    const vendedoresActivos = vendedoresData.filter(v => v.estado === 'Activo');
-    
-    vendedoresActivos.forEach(vendedor => {
-        const item = document.createElement('div');
-        item.style.background = '#f9f9f9';
-        item.style.borderLeft = '4px solid #2c3e50';
-        item.style.borderRadius = '5px';
-        item.style.overflow = 'hidden';
-        item.style.marginBottom = '10px';
+    // Cargar compromisos del mes
+    llamarAppScript('obtenerCompromisos', { mes: mes }).then(compromisos => {
+        console.log('Compromisos cargados:', compromisos);
         
-        const header = document.createElement('div');
-        header.style.background = '#2c3e50';
-        header.style.color = 'white';
-        header.style.padding = '15px';
-        header.style.cursor = 'pointer';
-        header.style.fontWeight = 'bold';
-        header.style.userSelect = 'none';
-        header.textContent = `👤 ${vendedor.nombre}`;
-        header.onclick = (e) => {
-            const content = item.querySelector('.wbr-content');
-            if (content) {
-                content.style.display = content.style.display === 'none' ? 'block' : 'none';
-            }
-        };
-        
-        const content = document.createElement('div');
-        content.className = 'wbr-content';
-        content.style.display = 'none';
-        content.style.padding = '15px';
-        content.style.background = 'white';
-        content.innerHTML = `
-            <p style="color: #666; font-size: 13px; margin-bottom: 10px;">
-                <strong>Vendedor:</strong> ${vendedor.nombre}<br/>
-                <strong>Sesión:</strong> ${mes} - Semana ${semana}<br/>
-            </p>
-            <p style="color: #999; font-size: 12px;">
-                [Aquí irán los 3 pasos: Compromisos, Descubrimientos, Acciones]
-            </p>
-        `;
-        
-        item.appendChild(header);
-        item.appendChild(content);
-        
+        // Generar acordeones de vendedores
+        const vendedoresActivos = vendedoresData.filter(v => v.estado === 'Activo');
         const vendedoresAccordion = document.getElementById('wbrVendedoresAccordion');
-        if (vendedoresAccordion) {
+        
+        vendedoresActivos.forEach(vendedor => {
+            // Filtrar compromisos de este vendedor
+            const compromisosDelVendedor = compromisos.filter(c => c.vendedor === vendedor.nombre);
+            
+            const item = document.createElement('div');
+            item.style.background = '#f9f9f9';
+            item.style.borderLeft = '4px solid #2c3e50';
+            item.style.borderRadius = '5px';
+            item.style.overflow = 'hidden';
+            item.style.marginBottom = '10px';
+            
+            const header = document.createElement('div');
+            header.style.background = '#2c3e50';
+            header.style.color = 'white';
+            header.style.padding = '15px';
+            header.style.cursor = 'pointer';
+            header.style.fontWeight = 'bold';
+            header.style.userSelect = 'none';
+            header.style.display = 'flex';
+            header.style.justifyContent = 'space-between';
+            header.style.alignItems = 'center';
+            
+            const headerLeft = document.createElement('span');
+            headerLeft.textContent = `👤 ${vendedor.nombre}`;
+            
+            const headerRight = document.createElement('span');
+            headerRight.style.fontSize = '12px';
+            headerRight.style.fontWeight = 'normal';
+            const cumplidos = compromisosDelVendedor.filter(c => c.estado === 'Completado').length;
+            const total = compromisosDelVendedor.length;
+            headerRight.textContent = `(${cumplidos}/${total} compromisos)`;
+            
+            header.appendChild(headerLeft);
+            header.appendChild(headerRight);
+            
+            const content = document.createElement('div');
+            content.className = 'wbr-content';
+            content.style.display = 'none';
+            content.style.padding = '15px';
+            content.style.background = 'white';
+            
+            // PASO 1: Compromisos
+            const paso1 = document.createElement('div');
+            paso1.style.marginBottom = '15px';
+            paso1.innerHTML = '<h4 style="color: #2c3e50; margin-bottom: 10px;">1️⃣ Compromisos</h4>';
+            
+            if (compromisosDelVendedor.length === 0) {
+                paso1.innerHTML += '<p style="color: #999; font-size: 12px;">No hay compromisos para este mes</p>';
+            } else {
+                const listaPaso1 = document.createElement('div');
+                compromisosDelVendedor.forEach(comp => {
+                    const compItem = document.createElement('div');
+                    compItem.style.background = '#f0f0f0';
+                    compItem.style.padding = '10px';
+                    compItem.style.borderRadius = '5px';
+                    compItem.style.marginBottom = '8px';
+                    compItem.style.display = 'flex';
+                    compItem.style.justifyContent = 'space-between';
+                    compItem.style.alignItems = 'center';
+                    compItem.style.fontSize = '13px';
+                    
+                    const compInfo = document.createElement('div');
+                    compInfo.style.flex = '1';
+                    compInfo.innerHTML = `
+                        <strong style="color: #2c3e50;">${comp.cliente}</strong><br/>
+                        <small style="color: #666;">${comp.clasificacion}</small>
+                    `;
+                    
+                    const compEstado = document.createElement('div');
+                    compEstado.style.display = 'flex';
+                    compEstado.style.gap = '5px';
+                    
+                    // Botón — (Pendiente)
+                    const btnPendiente = document.createElement('button');
+                    btnPendiente.textContent = '—';
+                    btnPendiente.style.width = '30px';
+                    btnPendiente.style.height = '30px';
+                    btnPendiente.style.border = '2px solid #ddd';
+                    btnPendiente.style.borderRadius = '50%';
+                    btnPendiente.style.cursor = 'pointer';
+                    btnPendiente.style.background = 'white';
+                    btnPendiente.style.fontWeight = 'bold';
+                    
+                    // Botón ✓ (Completado)
+                    const btnCompletado = document.createElement('button');
+                    btnCompletado.textContent = '✓';
+                    btnCompletado.style.width = '30px';
+                    btnCompletado.style.height = '30px';
+                    btnCompletado.style.border = '2px solid #27ae60';
+                    btnCompletado.style.borderRadius = '50%';
+                    btnCompletado.style.cursor = 'pointer';
+                    btnCompletado.style.background = comp.estado === 'Completado' ? '#27ae60' : 'white';
+                    btnCompletado.style.color = comp.estado === 'Completado' ? 'white' : '#27ae60';
+                    btnCompletado.style.fontWeight = 'bold';
+                    btnCompletado.onclick = () => cambiarEstadoCompromiso(comp.id, 'Completado', btnCompletado, btnPendiente);
+                    
+                    // Botón ✗ (No Completado)
+                    const btnNoCompletado = document.createElement('button');
+                    btnNoCompletado.textContent = '✗';
+                    btnNoCompletado.style.width = '30px';
+                    btnNoCompletado.style.height = '30px';
+                    btnNoCompletado.style.border = '2px solid #e74c3c';
+                    btnNoCompletado.style.borderRadius = '50%';
+                    btnNoCompletado.style.cursor = 'pointer';
+                    btnNoCompletado.style.background = comp.estado === 'No Completado' ? '#e74c3c' : 'white';
+                    btnNoCompletado.style.color = comp.estado === 'No Completado' ? 'white' : '#e74c3c';
+                    btnNoCompletado.style.fontWeight = 'bold';
+                    btnNoCompletado.onclick = () => cambiarEstadoCompromiso(comp.id, 'No Completado', btnNoCompletado, btnCompletado);
+                    
+                    compEstado.appendChild(btnPendiente);
+                    compEstado.appendChild(btnCompletado);
+                    compEstado.appendChild(btnNoCompletado);
+                    
+                    compItem.appendChild(compInfo);
+                    compItem.appendChild(compEstado);
+                    listaPaso1.appendChild(compItem);
+                });
+                paso1.appendChild(listaPaso1);
+            }
+            
+            content.appendChild(paso1);
+            
+            // PASO 2 y 3 (placeholders por ahora)
+            const paso2 = document.createElement('div');
+            paso2.innerHTML = '<h4 style="color: #2c3e50; margin-top: 15px; margin-bottom: 10px;">2️⃣ Descubrimientos</h4><p style="color: #999; font-size: 12px;">[Por implementar]</p>';
+            content.appendChild(paso2);
+            
+            const paso3 = document.createElement('div');
+            paso3.innerHTML = '<h4 style="color: #2c3e50; margin-top: 15px; margin-bottom: 10px;">3️⃣ Acciones</h4><p style="color: #999; font-size: 12px;">[Por implementar]</p>';
+            content.appendChild(paso3);
+            
+            header.onclick = (e) => {
+                content.style.display = content.style.display === 'none' ? 'block' : 'none';
+            };
+            
+            item.appendChild(header);
+            item.appendChild(content);
             vendedoresAccordion.appendChild(item);
-        }
+        });
     });
     
     // Scroll a la sección
-    vendedoresSection.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => {
+        vendedoresSection.scrollIntoView({ behavior: 'smooth' });
+    }, 500);
+}
+
+function cambiarEstadoCompromiso(idCompromiso, nuevoEstado, btnActual, btnOtro) {
+    console.log(`Actualizando compromiso ${idCompromiso} a estado: ${nuevoEstado}`);
+    
+    // Cambiar visualización de botones
+    btnActual.style.background = '#2c3e50';
+    btnActual.style.color = 'white';
+    
+    // Limpiar otros botones
+    const parent = btnActual.parentElement;
+    parent.querySelectorAll('button').forEach(btn => {
+        if (btn !== btnActual) {
+            btn.style.background = 'white';
+            btn.style.color = btn.textContent === '✓' ? '#27ae60' : btn.textContent === '✗' ? '#e74c3c' : '#666';
+        }
+    });
+    
+    // Guardar en Sheets (solo para completado/no completado)
+    if (nuevoEstado === 'Completado' || nuevoEstado === 'No Completado') {
+        const completado = nuevoEstado === 'Completado' ? true : false;
+        llamarAppScript('actualizarEstadoCompromiso', { 
+            idCompromiso: idCompromiso, 
+            completado: completado 
+        }).then(result => {
+            console.log('Resultado:', result);
+            if (!result.exito) {
+                alert('Error al guardar: ' + result.mensaje);
+            }
+        });
+    }
 }
 
 function cerrarVendedoresWBR() {
