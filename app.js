@@ -308,14 +308,22 @@ function generarAcordeones() {
     grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
     grid.style.gap = '20px';
     
-    const sesiones = wbrHistorico[mesCompleto] || [];
+    // Obtener número de semanas del mes
+    const semanasDelMes = SEMANAS_POR_MES[mesCompleto] || 4;
+    let sesionesGeneradas = 0;
     
-    if (sesiones.length === 0) {
-        container.innerHTML = '<p style="color: #666; padding: 20px;">No hay sesiones WBR para este mes</p>';
-        return;
-    }
-    
-    sesiones.forEach(sesion => {
+    // Generar una sesión por cada semana del mes
+    for (let semana = 1; semana <= semanasDelMes; semana++) {
+        // Buscar sesión existente o crear una por defecto
+        const sesionExistente = wbrHistorico[mesCompleto]?.find(w => w.semana === semana);
+        const sesion = sesionExistente || {
+            mes: mesCompleto,
+            semana: semana,
+            estado: 'Pendiente',
+            fecha_apertura: '',
+            fecha_cierre: ''
+        };
+        
         const card = document.createElement('div');
         card.style.background = 'white';
         card.style.padding = '20px';
@@ -351,15 +359,110 @@ function generarAcordeones() {
                 </div>
             </div>
             <div style="display: flex; gap: 10px;">
-                <button class="btn-success" style="flex: 1; padding: 8px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; background: #2c3e50; color: white;" onclick="abrirFormularioWBR('${sesion.mes}', ${sesion.semana})">Abrir</button>
+                <button class="btn-success" style="flex: 1; padding: 8px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; background: #2c3e50; color: white;" onclick="abrirSesionWBR('${sesion.mes}', ${sesion.semana})">Abrir</button>
                 ${sesion.estado === 'Cerrada' ? '<button class="btn-success" style="flex: 1; padding: 8px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; background: #3498db; color: white;" onclick="descargarPDFWBR(\'${sesion.mes}\', ${sesion.semana})">PDF</button>' : ''}
             </div>
         `;
         
         grid.appendChild(card);
+        sesionesGeneradas++;
+    }
+    
+    if (sesionesGeneradas === 0) {
+        container.innerHTML = '<p style="color: #666; padding: 20px;">No hay sesiones WBR para este mes</p>';
+    } else {
+        container.appendChild(grid);
+    }
+}
+
+function abrirSesionWBR(mes, semana) {
+    console.log(`Abriendo sesión: ${mes} - Semana ${semana}`);
+    
+    // Cambiar a la sección de vendedores (si existe)
+    const wbrSection = document.getElementById('wbr');
+    if (!wbrSection) return;
+    
+    // Crear una sección temporal para los acordeones de vendedores
+    let vendedoresSection = document.getElementById('wbrVendedoresSection');
+    if (!vendedoresSection) {
+        vendedoresSection = document.createElement('div');
+        vendedoresSection.id = 'wbrVendedoresSection';
+        vendedoresSection.style.marginTop = '40px';
+        wbrSection.appendChild(vendedoresSection);
+    }
+    
+    vendedoresSection.style.display = 'block';
+    vendedoresSection.innerHTML = `
+        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="color: #2c3e50; margin: 0;">Sesión: ${mes} - Semana ${semana}</h3>
+                <button onclick="cerrarVendedoresWBR()" style="padding: 10px 20px; background: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">← Volver</button>
+            </div>
+            <div id="wbrVendedoresAccordion" style="display: flex; flex-direction: column; gap: 15px;"></div>
+        </div>
+    `;
+    
+    // Generar acordeones de vendedores
+    const accordion = document.getElementById('wbrVendedoresAccordeon');
+    const vendedoresActivos = vendedoresData.filter(v => v.estado === 'Activo');
+    
+    vendedoresActivos.forEach(vendedor => {
+        const item = document.createElement('div');
+        item.style.background = '#f9f9f9';
+        item.style.borderLeft = '4px solid #2c3e50';
+        item.style.borderRadius = '5px';
+        item.style.overflow = 'hidden';
+        item.style.marginBottom = '10px';
+        
+        const header = document.createElement('div');
+        header.style.background = '#2c3e50';
+        header.style.color = 'white';
+        header.style.padding = '15px';
+        header.style.cursor = 'pointer';
+        header.style.fontWeight = 'bold';
+        header.style.userSelect = 'none';
+        header.textContent = `👤 ${vendedor.nombre}`;
+        header.onclick = (e) => {
+            const content = item.querySelector('.wbr-content');
+            if (content) {
+                content.style.display = content.style.display === 'none' ? 'block' : 'none';
+            }
+        };
+        
+        const content = document.createElement('div');
+        content.className = 'wbr-content';
+        content.style.display = 'none';
+        content.style.padding = '15px';
+        content.style.background = 'white';
+        content.innerHTML = `
+            <p style="color: #666; font-size: 13px; margin-bottom: 10px;">
+                <strong>Vendedor:</strong> ${vendedor.nombre}<br/>
+                <strong>Sesión:</strong> ${mes} - Semana ${semana}<br/>
+            </p>
+            <p style="color: #999; font-size: 12px;">
+                [Aquí irán los 3 pasos: Compromisos, Descubrimientos, Acciones]
+            </p>
+        `;
+        
+        item.appendChild(header);
+        item.appendChild(content);
+        
+        const vendedoresAccordion = document.getElementById('wbrVendedoresAccordion');
+        if (vendedoresAccordion) {
+            vendedoresAccordion.appendChild(item);
+        }
     });
     
-    container.appendChild(grid);
+    // Scroll a la sección
+    vendedoresSection.scrollIntoView({ behavior: 'smooth' });
+}
+
+function cerrarVendedoresWBR() {
+    const vendedoresSection = document.getElementById('wbrVendedoresSection');
+    if (vendedoresSection) {
+        vendedoresSection.style.display = 'none';
+        vendedoresSection.innerHTML = '';
+    }
 }
 
 function toggleAccordion(header) {
