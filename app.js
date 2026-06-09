@@ -341,14 +341,12 @@ function crearNuevaWBR() {
     const mesActual = MESES[now.getMonth()];
     const semanaActual = getWeekOfYear(now);
 
-    // Actualizar display
-    document.getElementById('wbr-mes-display').textContent = mesActual;
-    document.getElementById('wbr-semana-display').textContent = `# Semana ${semanaActual} de 52`;
+    // Actualizar título y header
     document.getElementById('wbr-titulo-sesion').textContent = `WBR - ${mesActual} Semana ${semanaActual}`;
 
-    // Mostrar botón cerrar sesión
-    document.getElementById('btn-cerrar-wbr').style.display = 'inline-block';
-    document.getElementById('btn-crear-wbr').style.display = 'none';
+    // Cambiar de vista: Pre-sesión → Sesión abierta
+    document.getElementById('wbr-vista-pre-sesion').style.display = 'none';
+    document.getElementById('wbr-vista-sesion-abierta').style.display = 'block';
 
     // Guardar sesión actual
     wbrActualSesion = { mes: mesActual, semana: semanaActual };
@@ -359,9 +357,6 @@ function crearNuevaWBR() {
             cargarVendedoresParaWBR(mesActual, semanaActual);
         }
     });
-
-    // Cambiar a tab "Nueva sesión"
-    mostrarTab('nueva-sesion');
 }
 
 function cargarVendedoresParaWBR(mes, semana) {
@@ -519,16 +514,31 @@ function cancelarVendedorWBR(vendedorId) {
     header.nextElementSibling.classList.remove('active');
 }
 
-function cerrarWBR() {
+function descargarPDFWBR() {
+    if (wbrActualSesion) {
+        llamarAppScript('generarPDFWBR', {
+            mes: wbrActualSesion.mes,
+            semana: wbrActualSesion.semana
+        }).then(response => {
+            if (response.exito && response.urlPDF) {
+                window.open(response.urlPDF, '_blank');
+                mostrarMensaje('', '✅ PDF descargado', 'success');
+            }
+        });
+    }
+}
     if (wbrActualSesion) {
         llamarAppScript('cerrarWBR', {
             mes: wbrActualSesion.mes,
             semana: wbrActualSesion.semana
         }).then(response => {
             if (response.exito) {
-                mostrarMensaje('', '✅ Sesión cerrada. PDF listo para descargar.', 'success');
-                document.getElementById('btn-cerrar-wbr').style.display = 'none';
-                document.getElementById('btn-crear-wbr').style.display = 'inline-block';
+                mostrarMensaje('', '✅ Sesión cerrada.', 'success');
+                
+                // Volver a vista pre-sesión
+                document.getElementById('wbr-vista-sesion-abierta').style.display = 'none';
+                document.getElementById('wbr-vista-pre-sesion').style.display = 'block';
+                
                 wbrActualSesion = null;
                 cargarHistorialWBR();
                 mostrarTab('historial');
