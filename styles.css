@@ -241,6 +241,19 @@ hr { margin: 30px 0; border: none; border-top: 1px solid #ddd; }
 .metric-card.clasificacion-c { border-left-color: #3498db; }
 .metric-card.clasificacion-c .metric-number { color: #3498db; }
 
+.metric-percentage {
+    font-size: 14px;
+    color: #667eea;
+    font-weight: bold;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #ecf0f1;
+}
+
+.metric-card.clasificacion-a .metric-percentage { color: #e74c3c; }
+.metric-card.clasificacion-b .metric-percentage { color: #f39c12; }
+.metric-card.clasificacion-c .metric-percentage { color: #3498db; }
+
 .dashboard-footer {
     text-align: center;
     padding-top: 20px;
