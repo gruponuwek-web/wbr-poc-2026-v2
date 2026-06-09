@@ -2,7 +2,7 @@
 // WBR SISTEMA v3 - APP.JS
 // =======================================
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx22j9B_70xAc3ZEuTRpAeSXE4a4Mt9Q34vh_9pZHH-n8DJx59wLDv9bu-qR9JkwFQy/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxCeYSJtZOWwPZ3XQUQf17DPoGVUXs1AlcX7VK1Obo4XuSNycXnvgdi_StL2UxAfx8/exec';
 
 let usuarioActual = 'Coordinador';
 let vendedoresData = [];
@@ -248,6 +248,40 @@ function loadDashboard() {
 
 function cargarWBRHistorico() {
     llamarAppScript('obtenerWBR', { mes: 'Junio' }).then(wbrs => {
+        wbrHistorico = {};
+        wbrs.forEach(w => {
+            if (!wbrHistorico[w.mes]) wbrHistorico[w.mes] = [];
+            wbrHistorico[w.mes].push(w);
+        });
+        renderizarTimeline();
+        generarAcordeones();
+    });
+}
+
+function renderizarTimeline() {
+    const container = document.getElementById('timelineMeses');
+    container.innerHTML = '';
+    
+    const abreviaturas = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    
+    MESES.forEach((mes, idx) => {
+        const item = document.createElement('div');
+        item.className = 'mes-item' + (mes === 'Junio' ? ' active' : '');
+        item.onclick = () => cambiarMesTimeline(mes, item);
+        item.innerHTML = `
+            <div class="mes-circle">${idx + 1}</div>
+            <div class="mes-label">${abreviaturas[idx]}</div>
+        `;
+        container.appendChild(item);
+    });
+}
+
+function cambiarMesTimeline(mes, element) {
+    document.querySelectorAll('.mes-item').forEach(item => item.classList.remove('active'));
+    element.classList.add('active');
+    
+    // Cargar WBR del mes seleccionado
+    llamarAppScript('obtenerWBR', { mes: mes }).then(wbrs => {
         wbrHistorico = {};
         wbrs.forEach(w => {
             if (!wbrHistorico[w.mes]) wbrHistorico[w.mes] = [];
