@@ -459,14 +459,254 @@ function cancelarVendedorWBR(vendedorId) {
     content.classList.remove('show');
 }
 
+function descargarPDF() {
+    console.log('Descargando PDF...');
+}
+
+// ===== GESTOR DE ACCIONES =====
+
+function cargarAccionesGestor() {
+    llamarAppScript('obtenerAcciones', { mes: 'Junio' }).then(acciones => {
+        const accionesNoCompletadas = acciones.filter(a => a.estado !== 'COMPLETADO' && a.estado !== 'Completado');
+        mostrarVistaAcciones('semanal', accionesNoCompletadas);
+    });
+}
+
+function mostrarVistaAcciones(vista, acciones = null) {
+    if (!acciones) {
+        llamarAppScript('obtenerAcciones', { mes: 'Junio' }).then(acc => {
+            acciones = acc.filter(a => a.estado !== 'COMPLETADO' && a.estado !== 'Completado');
+            renderizarVista(vista, acciones);
+        });
+    } else {
+        renderizarVista(vista, acciones);
+    }
+}
+
+function renderizarVista(vista, acciones) {
+    // Ocultar todas las vistas
+    document.querySelectorAll('.acciones-vista').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.acciones-tab').forEach(t => t.classList.remove('active'));
+    
+    // Mostrar vista seleccionada
+    document.getElementById('vista-' + vista).classList.add('active');
+    event.target.classList.add('active');
+    
+    if (vista === 'semanal') {
+        renderizarVistaSemanal(acciones);
+    } else {
+        renderizarVistaMensual(acciones);
+    }
+}
+
+function renderizarVistaSemanal(acciones) {
+    // Obtener la semana actual
+    const hoy = new Date();
+    const primerDia = new Date(hoy);
+    primerDia.setDate(hoy.getDate() - hoy.getDay() + 1); // Lunes
+    
+    const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    let kanbanHTML = '';
+    
+    // Generar columnas del kanban
+    for (let i = 0; i < 7; i++) {
+        const fecha = new Date(primerDia);
+        fecha.setDate(primerDia.getDate() + i);
+        
+        const fechaStr = String(fecha.getDate()).padStart(2, '0') + '/' + String(fecha.getMonth() + 1).padStart(2, '0');
+        const accionesDelDia = acciones.filter(a => {
+            const fechaAccion = new Date(a.fecha);
+            return fechaAccion.getDate() === fecha.getDate() && 
+                   fechaAccion.getMonth() === fecha.getMonth();
+        });
+        
+        let columnHTML = `
+            <div class="kanban-column">
+                <div class="kanban-header">${dias[i]}<br>${fechaStr}</div>
+        `;
+        
+        accionesDelDia.forEach(acc => {
+            columnHTML += `
+                <div class="kanban-card ${(acc.estado || 'Pendiente').toLowerCase().replace(' ', '-')}" 
+                     onclick="abrirModalCambiarEstado('${acc.id}', '${acc.tipo}', '${acc.descripcion}', '${acc.fecha}', '${acc.responsable}', '${acc.estado}')">
+                    <div class="kanban-card-tipo">${acc.tipo}</div>
+                    <div class="kanban-card-desc">${acc.descripcion.substring(0, 20)}...</div>
+                    <div class="kanban-card-resp">${acc.responsable}</div>
+                </div>
+            `;
+        });
+        
+        columnHTML += '</div>';
+        kanbanHTML += columnHTML;
+    }
+    
+    document.getElementById('kanban-semanal').innerHTML = kanbanHTML;
+    renderizarAccionesClasificadas(acciones, 'semanal');
+}
+
+function renderizarVistaMensual(acciones) {
+    const hoy = new Date();
+    const mes = hoy.getMonth();
+    const año = hoy.getFullYear();
+    const primerDia = new Date(año, mes, 1);
+    const ultimoDia = new Date(año, mes + 1, 0);
+    
+    const nombrMes = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][mes];
+    
+    let calendarioHTML = `
+        <div class="calendario-header">${nombrMes} ${año}</div>
+        <div class="calendario-grid">
+    `;
+    
+    // Agregar espacios vacíos antes del primer día
+    for (let i = 0; i < primerDia.getDay(); i++) {
+        calendarioHTML += '<div></div>';
+    }
+    
+    // Agregar días del mes
+    for (let dia = 1; dia <= ultimoDia.getDate(); dia++) {
+        const accionesDelDia = acciones.filter(a => {
+            const fechaAccion = new Date(a.fecha);
+            return fechaAccion.getDate() === dia && fechaAccion.getMonth() === mes;
+        });
+        
+        calendarioHTML += `
+            <div class="calendario-dia">
+                <div class="calendario-numero">${dia}</div>
+                <div class="calendario-count">${accionesDelDia.length > 0 ? '[' + accionesDelDia.length + ']' : ''}</div>
+            </div>
+        `;
+    }
+    
+    calendarioHTML += '</div>';
+    document.getElementById('calendario-mensual').innerHTML = calendarioHTML;
+    renderizarAccionesClasificadas(acciones, 'mensual');
+}
+
+function renderizarAccionesClasificadas(acciones, vista) {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    
+    const mañana = new Date(hoy);
+    mañana.setDate(hoy.getDate() + 1);
+    
+    const retrasadas = acciones.filter(a => new Date(a.fecha) < hoy);
+    const hoyAcciones = acciones.filter(a => new Date(a.fecha).getTime() === hoy.getTime());
+    const mañanaAcciones = acciones.filter(a => new Date(a.fecha).getTime() === mañana.getTime());
+    
+    let html = '<div class="clasificada-grupo">';
+    
+    // Retrasadas
+    if (retrasadas.length > 0) {
+        html += `<div class="clasificada-titulo retrasadas">🔴 RETRASADAS (${retrasadas.length})</div>
+                 <table class="clasificada-tabla"><tbody>`;
+        retrasadas.forEach(a => {
+            html += `<tr onclick="abrirModalCambiarEstado('${a.id}', '${a.tipo}', '${a.descripcion}', '${a.fecha}', '${a.responsable}', '${a.estado}')">
+                        <td>${a.tipo}</td>
+                        <td>${a.descripcion.substring(0, 15)}</td>
+                        <td>${formatearFecha(a.fecha)}</td>
+                        <td>${a.responsable}</td>
+                        <td>${a.estado}</td>
+                     </tr>`;
+        });
+        html += '</tbody></table>';
+    }
+    
+    // Hoy
+    if (hoyAcciones.length > 0) {
+        html += `<div class="clasificada-titulo hoy">🟡 HOY (${hoyAcciones.length})</div>
+                 <table class="clasificada-tabla"><tbody>`;
+        hoyAcciones.forEach(a => {
+            html += `<tr onclick="abrirModalCambiarEstado('${a.id}', '${a.tipo}', '${a.descripcion}', '${a.fecha}', '${a.responsable}', '${a.estado}')">
+                        <td>${a.tipo}</td>
+                        <td>${a.descripcion.substring(0, 15)}</td>
+                        <td>${formatearFecha(a.fecha)}</td>
+                        <td>${a.responsable}</td>
+                        <td>${a.estado}</td>
+                     </tr>`;
+        });
+        html += '</tbody></table>';
+    }
+    
+    // Mañana
+    if (mañanaAcciones.length > 0) {
+        html += `<div class="clasificada-titulo manana">🟢 MAÑANA (${mañanaAcciones.length})</div>
+                 <table class="clasificada-tabla"><tbody>`;
+        mañanaAcciones.forEach(a => {
+            html += `<tr onclick="abrirModalCambiarEstado('${a.id}', '${a.tipo}', '${a.descripcion}', '${a.fecha}', '${a.responsable}', '${a.estado}')">
+                        <td>${a.tipo}</td>
+                        <td>${a.descripcion.substring(0, 15)}</td>
+                        <td>${formatearFecha(a.fecha)}</td>
+                        <td>${a.responsable}</td>
+                        <td>${a.estado}</td>
+                     </tr>`;
+        });
+        html += '</tbody></table>';
+    }
+    
+    html += '</div>';
+    
+    document.getElementById('clasificadas-' + vista).innerHTML = html;
+}
+
+function abrirModalCambiarEstado(idAccion, tipo, descripcion, fecha, responsable, estadoActual) {
+    // Crear modal dinámico para cambiar estado
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.display = 'flex';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>✏️ Cambiar Estado</h3>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <p><strong>Tipo:</strong> ${tipo}</p>
+                <p><strong>Descripción:</strong> ${descripcion}</p>
+                <p><strong>Vencimiento:</strong> ${formatearFecha(fecha)}</p>
+                <p><strong>Responsable:</strong> ${responsable}</p>
+            </div>
+            
+            <div class="form-group">
+                <label>Estado:</label>
+                <select id="select-estado" value="${estadoActual}">
+                    <option value="Pendiente" ${estadoActual === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                    <option value="Completado" ${estadoActual === 'Completado' ? 'selected' : ''}>Completado</option>
+                    <option value="Cancelada" ${estadoActual === 'Cancelada' ? 'selected' : ''}>Cancelada</option>
+                </select>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-success" onclick="guardarEstadoAccion('${idAccion}')">Guardar</button>
+                <button class="btn-danger" onclick="this.closest('.modal').remove()">Cerrar</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function guardarEstadoAccion(idAccion) {
+    const nuevoEstado = document.getElementById('select-estado').value;
+    
+    llamarAppScript('actualizarEstadoAccion', {
+        idAccion: idAccion,
+        estado: nuevoEstado
+    }).then(response => {
+        if (response.exito) {
+            document.querySelector('.modal').remove();
+            cargarAccionesGestor();
+            alert('Estado actualizado ✅');
+        }
+    });
+}
+
 function showSection(sectionId) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     document.getElementById(sectionId).classList.add('active');
     document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
     event.target.classList.add('active');
+    
     if (sectionId === 'compromisos') cargarCompromisosGuardados();
-}
-
-function descargarPDF() {
-    console.log('Descargando PDF...');
+    if (sectionId === 'acciones') cargarAccionesGestor();
 }
