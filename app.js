@@ -50,6 +50,10 @@ function showSection(sectionId) {
     document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
     event.target.classList.add('active');
 
+    if (sectionId === 'compromisos') {
+        cargarCompromisos();
+    }
+
     if (sectionId === 'wbr') {
         cargarWBRHistorico();
     }
@@ -163,13 +167,22 @@ function pausarVendedor(id) {
 
 function cargarCompromisos() {
     const mes = document.getElementById('compromiso_mes').value;
+    const filtroEstado = document.getElementById('compromiso_filtro_estado').value;
+    
     llamarAppScript('obtenerCompromisos', { mes }).then(compromisos => {
+        // Filtrar por estado si no es "Todos"
+        let compromisosFiltrados = compromisos;
+        if (filtroEstado !== 'Todos') {
+            compromisosFiltrados = compromisos.filter(c => c.estado === filtroEstado);
+        }
+        
         const tbody = document.getElementById('compromiso_tabla');
         tbody.innerHTML = '';
-        if (compromisos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5">Sin compromisos</td></tr>';
+        
+        if (compromisosFiltrados.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6">Sin compromisos</td></tr>';
         } else {
-            compromisos.forEach(c => {
+            compromisosFiltrados.forEach(c => {
                 const row = `<tr><td>${c.id.substring(0, 8)}...</td><td>${c.mes}</td><td>${c.vendedor}</td><td>${c.cliente}</td><td>${c.clasificacion}</td><td>${c.estado}</td></tr>`;
                 tbody.innerHTML += row;
             });
@@ -206,16 +219,62 @@ function agregarCompromiso() {
 // =======================================
 
 function loadDashboard() {
-    const html = `
-        <div class="info-card">
-            <p><strong>Vendedores Activos:</strong> ${vendedoresData.filter(v => v.estado === 'Activo').length}</p>
-        </div>
-        <div class="info-card">
-            <p><strong>Sistema Activo:</strong> ✅ Conectado a Google Sheets</p>
-        </div>
-    `;
-    const dashDiv = document.getElementById('dashboardContent');
-    if (dashDiv) dashDiv.innerHTML = html;
+    const now = new Date();
+    const mesActual = MESES[now.getMonth()];
+    
+    document.getElementById('dashboardContent').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando dashboard...</div>';
+    
+    llamarAppScript('obtenerCompromisos', { mes: mesActual }).then(compromisos => {
+        // Calcular totales
+        const totalCompromisos = compromisos.length;
+        const completados = compromisos.filter(c => c.estado === 'Completado').length;
+        
+        // Calcular por clasificación
+        const prospecciones = compromisos.filter(c => c.clasificacion === 'Prospección');
+        const prospCompletadas = prospecciones.filter(c => c.estado === 'Completado').length;
+        
+        const crecimientos = compromisos.filter(c => c.clasificacion === 'Crecimiento');
+        const crecCompletados = crecimientos.filter(c => c.estado === 'Completado').length;
+        
+        const recuperados = compromisos.filter(c => c.clasificacion === 'Recuperado');
+        const recuCompletados = recuperados.filter(c => c.estado === 'Completado').length;
+        
+        // Calcular porcentajes
+        const pctTotal = totalCompromisos > 0 ? Math.round((completados / totalCompromisos) * 100) : 0;
+        const pctProsp = prospecciones.length > 0 ? Math.round((prospCompletadas / prospecciones.length) * 100) : 0;
+        const pctCrec = crecimientos.length > 0 ? Math.round((crecCompletados / crecimientos.length) * 100) : 0;
+        const pctRecu = recuperados.length > 0 ? Math.round((recuCompletados / recuperados.length) * 100) : 0;
+        
+        const html = `
+            <div class="dashboard-grid">
+                <div class="metric-card total">
+                    <div class="metric-label">Compromisos Total</div>
+                    <div class="metric-number">${completados}/${totalCompromisos}</div>
+                    <div class="metric-percentage">${pctTotal}%</div>
+                </div>
+                <div class="metric-card clasificacion-a">
+                    <div class="metric-label">Prospección</div>
+                    <div class="metric-number">${prospCompletadas}/${prospecciones.length}</div>
+                    <div class="metric-percentage">${pctProsp}%</div>
+                </div>
+                <div class="metric-card clasificacion-b">
+                    <div class="metric-label">Crecimiento</div>
+                    <div class="metric-number">${crecCompletados}/${crecimientos.length}</div>
+                    <div class="metric-percentage">${pctCrec}%</div>
+                </div>
+                <div class="metric-card clasificacion-c">
+                    <div class="metric-label">Recuperado</div>
+                    <div class="metric-number">${recuCompletados}/${recuperados.length}</div>
+                    <div class="metric-percentage">${pctRecu}%</div>
+                </div>
+            </div>
+            <div class="dashboard-footer">
+                <span class="connection-status connected">✅ Conectado a Google Sheets</span>
+            </div>
+        `;
+        
+        document.getElementById('dashboardContent').innerHTML = html;
+    });
 }
 
 // =======================================
@@ -723,9 +782,21 @@ function cargarCompromisosVendedorWBR(mes, vendedor, vendedorId) {
 
 function marcarCompromiso(idCompromiso, estado, boton) {
     const parent = boton.parentElement;
-    parent.querySelectorAll('.btn-estado').forEach(btn => btn.classList.remove('completado', 'no-completado'));
-    boton.classList.add(estado === 'Completado' ? 'completado' : 'no-completado');
-    boton.setAttribute('data-estado', estado);
+    const estadoActual = boton.getAttribute('data-estado');
+    
+    // Si ya está seleccionado con este estado, deseleccionar (toggle)
+    if (estadoActual === estado) {
+        boton.classList.remove('completado', 'no-completado');
+        boton.removeAttribute('data-estado');
+    } else {
+        // Deseleccionar el otro botón
+        parent.querySelectorAll('.btn-estado').forEach(btn => btn.classList.remove('completado', 'no-completado'));
+        parent.querySelectorAll('.btn-estado').forEach(btn => btn.removeAttribute('data-estado'));
+        
+        // Seleccionar este botón
+        boton.classList.add(estado === 'Completado' ? 'completado' : 'no-completado');
+        boton.setAttribute('data-estado', estado);
+    }
 }
 
 function cargarAccionesVendedorWBR(mes, vendedorId) {
