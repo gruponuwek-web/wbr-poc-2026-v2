@@ -77,34 +77,20 @@
                         <select id="compromiso_vendedor"></select>
                     </div>
                 </div>
-                <div class="form-group inline">
-                    <div>
-                        <label>Cliente:</label>
-                        <input type="text" id="compromiso_cliente" placeholder="Nombre o código de cliente">
-                    </div>
-                    <div>
-                        <label>Clasificación:</label>
-                        <select id="compromiso_clasificacion">
-                            <option value="Prospección">Prospección</option>
-                            <option value="Crecimiento">Crecimiento</option>
-                            <option value="Recuperado">Recuperado</option>
-                        </select>
-                    </div>
+                <div class="form-group">
+                    <label>Cliente:</label>
+                    <input type="text" id="compromiso_cliente" placeholder="Nombre del cliente">
+                </div>
+                <div class="form-group">
+                    <label>Clasificación:</label>
+                    <select id="compromiso_clasificacion">
+                        <option value="A">A - Crítico</option>
+                        <option value="B">B - Importante</option>
+                        <option value="C">C - Regular</option>
+                    </select>
                 </div>
                 <button class="btn-success" onclick="agregarCompromiso()">Guardar Compromiso</button>
                 <div id="compromisoMsg"></div>
-
-                <h3 style="margin-top: 30px;">📋 Compromisos</h3>
-                <div class="form-group">
-                    <label>Filtrar por Estado:</label>
-                    <select id="compromiso_filtro_estado" onchange="cargarCompromisos()">
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="Completado">Completado</option>
-                        <option value="No Completado">No Completado</option>
-                        <option value="Todos">Todos</option>
-                    </select>
-                </div>
-
                 <table>
                     <thead>
                         <tr><th>ID</th><th>Mes</th><th>Vendedor</th><th>Cliente</th><th>Clasificación</th><th>Estado</th></tr>
@@ -241,18 +227,12 @@
                 <div class="wbr-container">
                     <!-- TABS -->
                     <div class="wbr-tabs">
-                        <button class="wbr-tab active" id="tab-nueva-sesion" onclick="mostrarTab('nueva-sesion')">
-                            📅 Nueva sesión
-                        </button>
-                        <button class="wbr-tab" id="tab-historial" onclick="mostrarTab('historial')">
-                            📋 Historial
-                        </button>
+                        <button class="wbr-tab active" id="tab-nueva-sesion" onclick="mostrarTab('nueva-sesion')">📅 Nueva sesión</button>
+                        <button class="wbr-tab" id="tab-historial" onclick="mostrarTab('historial')">📋 Historial</button>
                     </div>
 
-                    <!-- CONTENIDO: NUEVA SESIÓN -->
+                    <!-- NUEVA SESIÓN -->
                     <div class="wbr-content" id="contenido-nueva-sesion">
-                        
-                        <!-- VISTA 1: PRE-SESIÓN (Antes de crear) -->
                         <div id="wbr-vista-pre-sesion" class="wbr-vista-pre-sesion">
                             <div class="wbr-header-pre">
                                 <div class="wbr-info">
@@ -260,83 +240,85 @@
                                     <span class="wbr-separator">|</span>
                                     <span class="wbr-semana" id="wbr-semana-display-pre"># Semana 24 de 52</span>
                                 </div>
-                                <button class="btn-success" id="btn-crear-wbr-pre" onclick="crearNuevaWBR()">
-                                    ➕ Crear Sesión
-                                </button>
+                                <button class="btn-success" onclick="crearNuevaWBR()">➕ Crear Sesión</button>
                             </div>
                         </div>
 
-                        <!-- VISTA 2: SESIÓN ABIERTA (Después de crear) -->
                         <div id="wbr-vista-sesion-abierta" class="wbr-vista-sesion-abierta" style="display: none;">
-                            
-                            <!-- HEADER SESIÓN ABIERTA -->
                             <div class="wbr-sesion-header">
                                 <h3 id="wbr-titulo-sesion">WBR - Junio Semana 24</h3>
                                 <div class="wbr-sesion-botones">
-                                    <button class="btn-primary" id="btn-descargar-pdf" onclick="descargarPDFWBR()" style="display: none;">
-                                        📄 PDF
-                                    </button>
-                                    <button class="btn-danger" id="btn-cerrar-wbr" onclick="cerrarWBR()">
-                                        🔒 Cerrar Sesión
-                                    </button>
+                                    <button class="btn-primary" id="btn-descargar-pdf" onclick="descargarPDFWBR()" style="display: none;">📄 PDF</button>
+                                    <button class="btn-danger" id="btn-cerrar-wbr" onclick="cerrarWBR()">🔒 Cerrar Sesión</button>
                                 </div>
                             </div>
-
-                            <!-- ACORDEONES DE VENDEDORES -->
-                            <div id="wbr-vendedores-container" class="wbr-vendedores">
-                                <!-- Se generan dinámicamente -->
-                            </div>
+                            <div id="wbr-vendedores-container" class="wbr-vendedores"></div>
                         </div>
                     </div>
 
-                    <!-- CONTENIDO: HISTORIAL -->
+                    <!-- HISTORIAL -->
                     <div class="wbr-content" id="contenido-historial" style="display: none;">
                         <h3>📋 Historial de Sesiones WBR</h3>
-                        <div id="wbr-historial-list" class="wbr-historial-list">
-                            <!-- Se generan dinámicamente -->
-                        </div>
+                        <div id="wbr-historial-list" class="wbr-historial-list"></div>
                     </div>
                 </div>
             </section>
 
-            <!-- ACCIONES -->
-            <section id="acciones" class="section">
-                <h2>⚡ Acciones de Seguimiento</h2>
-                <div class="form-group">
-                    <label>Mes:</label>
-                    <select id="accion_mes" onchange="cargarAcciones()"><option value="Junio" selected>Junio</option></select>
+            <!-- MODAL DE ACCIONES -->
+            <div id="modalAccion" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>➕ Agregar Acción</h3>
+                        <button class="modal-close" onclick="cerrarModalAccion()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Fecha:</label>
+                            <input type="date" id="accion_fecha" placeholder="Seleccionar fecha">
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo:</label>
+                            <div style="display: flex; gap: 10px;">
+                                <select id="accion_tipo" onchange="mostrarInputOtra()">
+                                    <option value="">-- Seleccionar --</option>
+                                    <option value="Llamada">Llamada</option>
+                                    <option value="Acompañamiento">Acompañamiento</option>
+                                    <option value="Reunión">Reunión</option>
+                                    <option value="Capacitación">Capacitación</option>
+                                    <option value="Asesoría">Asesoría</option>
+                                    <option value="Estrategia">Estrategia</option>
+                                    <option value="Visita">Visita</option>
+                                    <option value="Presentación">Presentación</option>
+                                    <option value="Negociación">Negociación</option>
+                                    <option value="Reporte/Análisis">Reporte/Análisis</option>
+                                    <option value="Otra">Otra</option>
+                                </select>
+                                <input type="text" id="accion_tipo_otra" placeholder="Especificar tipo" style="display: none; flex: 1;">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Vendedor:</label>
+                            <select id="accion_vendedor" disabled></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Descripción:</label>
+                            <textarea id="accion_descripcion" placeholder="Detalle de la acción..." style="min-height: 80px;"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Responsable:</label>
+                            <input type="text" id="accion_responsable" placeholder="Quién ejecutará esta acción">
+                        </div>
+                        <div class="form-group">
+                            <label>Vencimiento:</label>
+                            <input type="date" id="accion_vencimiento">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-secondary" onclick="cerrarModalAccion()">Cancelar</button>
+                        <button class="btn-success" onclick="guardarAccion()">Guardar Acción</button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Semana:</label>
-                    <input type="number" id="accion_semana" min="1" max="4" value="1">
-                </div>
-                <div class="form-group">
-                    <label>Tipo:</label>
-                    <select id="accion_tipo"><option value="Tarea">Tarea</option><option value="Llamada">Llamada</option><option value="Reunión">Reunión</option><option value="Email">Email</option></select>
-                </div>
-                <div class="form-group">
-                    <label>Vendedor:</label>
-                    <select id="accion_vendedor"></select>
-                </div>
-                <div class="form-group">
-                    <label>Descripción:</label>
-                    <textarea id="accion_descripcion" placeholder="Detalle de la acción..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Responsable:</label>
-                    <input type="text" id="accion_responsable" placeholder="Nombre del responsable">
-                </div>
-                <div class="form-group">
-                    <label>Fecha de Vencimiento:</label>
-                    <input type="date" id="accion_fecha">
-                </div>
-                <button class="btn-success" id="btnAgregarAccion" onclick="agregarAccion()">Crear Acción</button>
-                <div id="accionMsg"></div>
-                <table>
-                    <thead><tr><th>Tipo</th><th>Vendedor</th><th>Descripción</th><th>Responsable</th><th>Vencimiento</th><th>Estado</th></tr></thead>
-                    <tbody id="accionTableBody"><tr><td colspan="6" class="loading"><div class="spinner"></div></td></tr></tbody>
-                </table>
-            </section>
+            </div>
         </div>
     </div>
 </div>
