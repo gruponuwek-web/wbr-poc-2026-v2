@@ -58,7 +58,7 @@ function inicializarDatos() {
 }
 
 // =======================================
-// FETCH (conectado a Sheets vía Apps Script)
+// FETCH (conectado a Sheets, con fallback a localStorage)
 // =======================================
 
 async function llamarAppScript(action, params = {}) {
@@ -83,11 +83,51 @@ async function llamarAppScript(action, params = {}) {
         }
         
         const data = await response.json();
-        console.log('✅ Respuesta:', data);
+        console.log('✅ Respuesta (Sheets):', data);
         return data;
     } catch(error) {
-        console.error('❌ Error en fetch:', error);
-        return { exito: false, mensaje: 'Error de conexión: ' + error.message };
+        console.warn('⚠️  Apps Script falló, usando localStorage como fallback:', error.message);
+        
+        // FALLBACK A LOCALHOST
+        return llamarLocalStorage(action, params);
+    }
+}
+
+// Fallback a localStorage (datos de prueba)
+function llamarLocalStorage(action, params = {}) {
+    console.log(`📦 Usando localStorage para: ${action}`);
+    
+    try {
+        switch(action) {
+            case 'obtenerVendedores':
+                return { exito: true, data: JSON.parse(localStorage.getItem('wbr_vendedores')) || [] };
+            
+            case 'obtenerCompromisos':
+                const compromisos = JSON.parse(localStorage.getItem('wbr_compromisos')) || [];
+                const filtrados = compromisos.filter(c => c.mes === params.mes);
+                return { exito: true, data: filtrados };
+            
+            case 'obtenerWBR':
+                const sesiones = JSON.parse(localStorage.getItem('wbr_sesiones')) || [];
+                const sesionesDelMes = sesiones.filter(s => s.mes === params.mes);
+                return { exito: true, data: sesionesDelMes };
+            
+            case 'actualizarEstadoCompromiso':
+                const allCompromisos = JSON.parse(localStorage.getItem('wbr_compromisos')) || [];
+                const compIndex = allCompromisos.findIndex(c => c.id === params.idCompromiso);
+                if (compIndex !== -1) {
+                    allCompromisos[compIndex].estado = params.completado === 'true' || params.completado === true ? 'Completado' : 'No Completado';
+                    localStorage.setItem('wbr_compromisos', JSON.stringify(allCompromisos));
+                    return { exito: true, mensaje: 'Estado actualizado (localStorage)' };
+                }
+                return { exito: false, mensaje: 'Compromiso no encontrado' };
+            
+            default:
+                return { exito: false, mensaje: 'Acción no reconocida' };
+        }
+    } catch(error) {
+        console.error('❌ Error en localStorage:', error);
+        return { exito: false, mensaje: 'Error: ' + error.message };
     }
 }
 
@@ -139,141 +179,190 @@ async function cargarVendedores() {
 // =======================================
 
 async function cargarWBRHistorico() {
-    wbrHistorico = {};
-    
-    for (const mes of MESES) {
-        const result = await llamarAppScript('obtenerWBR', { mes: mes });
-        if (result.exito && result.data) {
-            wbrHistorico[mes] = result.data;
-        } else {
-            wbrHistorico[mes] = [];
-        }
-    }
-    
-    console.log('✅ WBR histórico cargado:', wbrHistorico);
-    generarAcordeones();
+    // Solo carga Junio (mes actual)
+    cargarSesionesActuales();
 }
 
 // =======================================
-// WBR - SESIONES (GRID)
+// WBR - CARGAR Y RENDERIZAR SESIONES
 // =======================================
 
-function generarAcordeones() {
+async function cargarSesionesActuales() {
+    // Solo carga sesiones que existen (actualmente Junio)
+    const result = await llamarAppScript('obtenerWBR', { mes: 'Junio' });
+    
+    if (result.exito && result.data) {
+        const sesiones = result.data;
+        renderizarSesiones(sesiones);
+    } else {
+        // Fallback: usa datos de localStorage
+        const sesionesLocal = JSON.parse(localStorage.getItem('wbr_sesiones')) || [];
+        renderizarSesiones(sesionesLocal);
+    }
+}
+
+function renderizarSesiones(sesiones) {
     const container = document.getElementById('wbrAccordionContainer');
     if (!container) return;
     
     container.innerHTML = '';
     
-    // Obtener el mes actualmente seleccionado
-    const mesActivo = document.querySelector('.mes-item.active .mes-label')?.textContent;
-    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    const MESES_COMPLETOS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    const mesIndex = meses.indexOf(mesActivo);
-    const mesCompleto = MESES_COMPLETOS[mesIndex] || 'Junio';
+    // Botón crear sesión
+    const btnCrear = document.createElement('button');
+    btnCrear.innerHTML = '➕ Crear Sesión';
+    btnCrear.style.padding = '12px 20px';
+    btnCrear.style.background = '#27ae60';
+    btnCrear.style.color = 'white';
+    btnCrear.style.border = 'none';
+    btnCrear.style.borderRadius = '5px';
+    btnCrear.style.cursor = 'pointer';
+    btnCrear.style.fontWeight = 'bold';
+    btnCrear.style.marginBottom = '20px';
+    btnCrear.style.fontSize = '14px';
+    btnCrear.onclick = () => crearNuevaSesion();
+    container.appendChild(btnCrear);
     
-    // Obtener número de semanas del mes PRIMERO
-    const semanasDelMes = SEMANAS_POR_MES[mesCompleto] || 4;
-    let sesionesGeneradas = 0;
+    // Separar activas y cerradas
+    const activas = sesiones.filter(s => s.estado !== 'Cerrada');
+    const cerradas = sesiones.filter(s => s.estado === 'Cerrada');
     
-    // Crear grid para las sesiones
-    const grid = document.createElement('div');
-    grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = 'repeat(' + semanasDelMes + ', 1fr)';
-    grid.style.gap = '20px';
-    
-    // Generar una sesión por cada semana del mes
-    for (let semana = 1; semana <= semanasDelMes; semana++) {
-        // Buscar sesión existente o crear una por defecto
-        const sesionExistente = wbrHistorico[mesCompleto]?.find(w => w.semana === semana);
-        const sesion = sesionExistente || {
-            mes: mesCompleto,
-            semana: semana,
-            estado: 'Pendiente',
-            fecha_apertura: '',
-            fecha_cierre: ''
-        };
+    // SECCIÓN 1: Sesiones Activas
+    if (activas.length > 0) {
+        const seccionActivas = document.createElement('div');
+        seccionActivas.style.marginBottom = '20px';
         
-        const card = document.createElement('div');
-        card.style.background = 'white';
-        card.style.padding = '20px';
-        card.style.borderRadius = '8px';
-        card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-        card.style.borderLeft = '4px solid #667eea';
-        card.style.cursor = 'pointer';
-        card.style.transition = 'all 0.3s';
-        card.onmouseover = () => {
-            card.style.transform = 'translateY(-5px)';
-            card.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
-        };
-        card.onmouseout = () => {
-            card.style.transform = 'translateY(0)';
-            card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-        };
+        const headerActivas = document.createElement('div');
+        headerActivas.innerHTML = `<h3 style="color: #2c3e50; margin-bottom: 15px;">📌 Sesiones Activas (${activas.length})</h3>`;
+        seccionActivas.appendChild(headerActivas);
         
-        // Determinar color del estado
-        let colorEstado = '#667eea';
-        if (sesion.estado === 'Cerrada') colorEstado = '#e74c3c';
-        else if (sesion.estado === 'Abierta') colorEstado = '#27ae60';
-        else if (sesion.estado === 'Pendiente') colorEstado = '#f39c12';
+        const gridActivas = document.createElement('div');
+        gridActivas.style.display = 'flex';
+        gridActivas.style.flexDirection = 'column';
+        gridActivas.style.gap = '10px';
         
-        card.innerHTML = `
-            <div style="margin-bottom: 15px;">
-                <h4 style="color: #2c3e50; margin-bottom: 5px; font-size: 16px;">Semana ${sesion.semana}</h4>
-                <span style="display: inline-block; background: ${colorEstado}; color: white; padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: bold;">${sesion.estado}</span>
-            </div>
-            <div style="color: #666; font-size: 13px; margin-bottom: 15px;">
-                <p style="margin-bottom: 8px;"><strong>Compromisos:</strong> Por cargar</p>
-                <div style="width: 100%; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden;">
-                    <div style="width: 50%; height: 100%; background: #27ae60;"></div>
-                </div>
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn-success" style="flex: 1; padding: 8px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; background: #2c3e50; color: white;" onclick="abrirSesionWBR('${sesion.mes}', ${sesion.semana})">Abrir</button>
-                ${sesion.estado === 'Cerrada' ? '<button class="btn-success" style="flex: 1; padding: 8px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; background: #3498db; color: white;" onclick="descargarPDFWBR(\'${sesion.mes}\', ${sesion.semana})">PDF</button>' : ''}
-            </div>
-        `;
+        activas.forEach(sesion => {
+            const card = crearTarjetaSesion(sesion);
+            gridActivas.appendChild(card);
+        });
         
-        grid.appendChild(card);
-        sesionesGeneradas++;
-    }
-    
-    if (sesionesGeneradas === 0) {
-        container.innerHTML = '<p style="color: #666; padding: 20px;">No hay sesiones WBR para este mes</p>';
+        seccionActivas.appendChild(gridActivas);
+        container.appendChild(seccionActivas);
     } else {
-        container.appendChild(grid);
+        const empty = document.createElement('p');
+        empty.textContent = 'No hay sesiones activas';
+        empty.style.color = '#999';
+        empty.style.marginBottom = '20px';
+        container.appendChild(empty);
+    }
+    
+    // SECCIÓN 2: Sesiones Anteriores (acordeón)
+    if (cerradas.length > 0) {
+        const seccionAnterior = document.createElement('div');
+        seccionAnterior.style.marginTop = '30px';
+        seccionAnterior.style.borderTop = '1px solid #ddd';
+        seccionAnterior.style.paddingTop = '20px';
+        
+        const headerAnterior = document.createElement('div');
+        headerAnterior.style.background = '#ecf0f1';
+        headerAnterior.style.padding = '15px';
+        headerAnterior.style.borderRadius = '5px';
+        headerAnterior.style.cursor = 'pointer';
+        headerAnterior.style.fontWeight = 'bold';
+        headerAnterior.style.display = 'flex';
+        headerAnterior.style.justifyContent = 'space-between';
+        headerAnterior.style.alignItems = 'center';
+        headerAnterior.style.userSelect = 'none';
+        headerAnterior.innerHTML = `
+            <span>📂 Sesiones Anteriores (${cerradas.length})</span>
+            <span style="font-size: 12px;">▼</span>
+        `;
+        
+        const contenidoAnterior = document.createElement('div');
+        contenidoAnterior.style.display = 'none';
+        contenidoAnterior.style.marginTop = '10px';
+        contenidoAnterior.style.paddingTop = '10px';
+        
+        const gridAnterior = document.createElement('div');
+        gridAnterior.style.display = 'flex';
+        gridAnterior.style.flexDirection = 'column';
+        gridAnterior.style.gap = '10px';
+        
+        cerradas.forEach(sesion => {
+            const card = crearTarjetaSesion(sesion, true);
+            gridAnterior.appendChild(card);
+        });
+        
+        contenidoAnterior.appendChild(gridAnterior);
+        
+        headerAnterior.onclick = () => {
+            const isOpen = contenidoAnterior.style.display !== 'none';
+            contenidoAnterior.style.display = isOpen ? 'none' : 'block';
+            headerAnterior.querySelector('span:last-child').textContent = isOpen ? '▼' : '▲';
+        };
+        
+        seccionAnterior.appendChild(headerAnterior);
+        seccionAnterior.appendChild(contenidoAnterior);
+        container.appendChild(seccionAnterior);
     }
 }
 
-// =======================================
-// WBR - TIMELINE
-// =======================================
-
-function renderizarTimeline() {
-    const container = document.getElementById('timelineMeses');
-    if (!container) return;
+function crearTarjetaSesion(sesion, esCerrada = false) {
+    const card = document.createElement('div');
+    card.style.background = 'white';
+    card.style.padding = '15px';
+    card.style.borderRadius = '5px';
+    card.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+    card.style.borderLeft = '4px solid ' + (sesion.estado === 'Cerrada' ? '#95a5a6' : sesion.estado === 'Abierta' ? '#27ae60' : '#f39c12');
+    card.style.display = 'flex';
+    card.style.justifyContent = 'space-between';
+    card.style.alignItems = 'center';
     
-    container.innerHTML = '';
-    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const info = document.createElement('div');
+    info.innerHTML = `
+        <h4 style="color: #2c3e50; margin: 0 0 5px 0; font-size: 14px;">Semana ${sesion.semana}</h4>
+        <small style="color: #999;">Estado: <strong>${sesion.estado}</strong></small>
+    `;
     
-    meses.forEach((mes, index) => {
-        const item = document.createElement('div');
-        item.className = 'mes-item';
-        if (index === 5) item.classList.add('active'); // Junio por defecto
-        
-        item.innerHTML = `
-            <div class="mes-circle">${index + 1}</div>
-            <div class="mes-label">${mes}</div>
-        `;
-        
-        item.onclick = () => cambiarMesTimeline(mes, item);
-        container.appendChild(item);
-    });
+    const botones = document.createElement('div');
+    botones.style.display = 'flex';
+    botones.style.gap = '8px';
+    
+    if (!esCerrada) {
+        const btnAbrir = document.createElement('button');
+        btnAbrir.textContent = 'Abrir';
+        btnAbrir.style.padding = '8px 15px';
+        btnAbrir.style.background = '#2c3e50';
+        btnAbrir.style.color = 'white';
+        btnAbrir.style.border = 'none';
+        btnAbrir.style.borderRadius = '4px';
+        btnAbrir.style.cursor = 'pointer';
+        btnAbrir.style.fontSize = '12px';
+        btnAbrir.onclick = () => abrirSesionWBR('Junio', sesion.semana);
+        botones.appendChild(btnAbrir);
+    }
+    
+    if (sesion.estado === 'Cerrada') {
+        const btnPDF = document.createElement('button');
+        btnPDF.textContent = 'PDF';
+        btnPDF.style.padding = '8px 15px';
+        btnPDF.style.background = '#3498db';
+        btnPDF.style.color = 'white';
+        btnPDF.style.border = 'none';
+        btnPDF.style.borderRadius = '4px';
+        btnPDF.style.cursor = 'pointer';
+        btnPDF.style.fontSize = '12px';
+        botones.appendChild(btnPDF);
+    }
+    
+    card.appendChild(info);
+    card.appendChild(botones);
+    return card;
 }
 
-function cambiarMesTimeline(mes, element) {
-    document.querySelectorAll('.mes-item').forEach(el => el.classList.remove('active'));
-    element.classList.add('active');
-    generarAcordeones();
+function crearNuevaSesion() {
+    // TODO: Implementar formulario para crear nueva sesión
+    alert('Crear nueva sesión - Por implementar');
+    console.log('Crear nueva sesión');
 }
 
 // =======================================
@@ -498,7 +587,6 @@ function showSection(sectionId) {
     if (event?.target) event.target.classList.add('active');
 
     if (sectionId === 'wbr') {
-        renderizarTimeline();
         cargarWBRHistorico();
     }
 }
