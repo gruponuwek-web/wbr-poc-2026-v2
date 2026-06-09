@@ -215,14 +215,15 @@ function renderizarHeaderWBR(sesiones) {
     
     // Header con info del mes y botón
     const header = document.createElement('div');
-    header.style.background = 'white';
-    header.style.padding = '15px 20px';
-    header.style.borderRadius = '5px';
-    header.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+    header.style.background = 'transparent';
+    header.style.padding = '0';
+    header.style.borderRadius = '0';
+    header.style.boxShadow = 'none';
     header.style.display = 'flex';
     header.style.justifyContent = 'space-between';
     header.style.alignItems = 'center';
     header.style.marginBottom = '20px';
+    header.style.borderBottom = 'none';
     
     // Lado izquierdo: Info del mes y semana
     const info = document.createElement('div');
@@ -243,6 +244,15 @@ function renderizarHeaderWBR(sesiones) {
     btnCrear.style.cursor = 'pointer';
     btnCrear.style.fontWeight = 'bold';
     btnCrear.style.fontSize = '13px';
+    btnCrear.style.transition = 'all 0.3s';
+    btnCrear.onmouseover = () => {
+        btnCrear.style.background = '#229954';
+        btnCrear.style.transform = 'scale(1.05)';
+    };
+    btnCrear.onmouseout = () => {
+        btnCrear.style.background = '#27ae60';
+        btnCrear.style.transform = 'scale(1)';
+    };
     btnCrear.onclick = () => crearNuevaSesion();
     
     header.appendChild(info);
