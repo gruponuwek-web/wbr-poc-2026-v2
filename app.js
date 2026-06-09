@@ -50,6 +50,11 @@ function showSection(sectionId) {
     document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
     event.target.classList.add('active');
 
+    // Cargar compromisos cuando se abre la sección
+    if (sectionId === 'compromisos') {
+        cargarCompromisos();
+    }
+
     if (sectionId === 'wbr') {
         cargarWBRHistorico();
     }
@@ -234,13 +239,22 @@ function pausarVendedor(id) {
 
 function cargarCompromisos() {
     const mes = document.getElementById('compromiso_mes').value;
+    const filtroEstado = document.getElementById('compromiso_filtro_estado').value;
+    
     llamarAppScript('obtenerCompromisos', { mes }).then(compromisos => {
+        // Filtrar por estado si no es "Todos"
+        let compromisosFiltrados = compromisos;
+        if (filtroEstado !== 'Todos') {
+            compromisosFiltrados = compromisos.filter(c => c.estado === filtroEstado);
+        }
+        
         const tbody = document.getElementById('compromiso_tabla');
         tbody.innerHTML = '';
-        if (compromisos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5">Sin compromisos</td></tr>';
+        
+        if (compromisosFiltrados.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6">Sin compromisos</td></tr>';
         } else {
-            compromisos.forEach(c => {
+            compromisosFiltrados.forEach(c => {
                 const row = `<tr><td>${c.id.substring(0, 8)}...</td><td>${c.mes}</td><td>${c.vendedor}</td><td>${c.cliente}</td><td>${c.clasificacion}</td><td>${c.estado}</td></tr>`;
                 tbody.innerHTML += row;
             });
