@@ -80,20 +80,34 @@
                         <select id="compromiso_vendedor"></select>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>Cliente:</label>
-                    <input type="text" id="compromiso_cliente" placeholder="Nombre del cliente">
-                </div>
-                <div class="form-group">
-                    <label>Clasificación:</label>
-                    <select id="compromiso_clasificacion">
-                        <option value="Prospección">Prospección</option>
-                        <option value="Crecimiento">Crecimiento</option>
-                        <option value="Recuperado">Recuperado</option>
-                    </select>
+                <div class="form-group inline">
+                    <div>
+                        <label>Cliente:</label>
+                        <input type="text" id="compromiso_cliente" placeholder="Nombre o código de cliente">
+                    </div>
+                    <div>
+                        <label>Clasificación:</label>
+                        <select id="compromiso_clasificacion">
+                            <option value="Prospección">Prospección</option>
+                            <option value="Crecimiento">Crecimiento</option>
+                            <option value="Recuperado">Recuperado</option>
+                        </select>
+                    </div>
                 </div>
                 <button class="btn-success" onclick="agregarCompromiso()">Guardar Compromiso</button>
                 <div id="compromisoMsg"></div>
+
+                <h3 style="margin-top: 30px;">📋 Compromisos</h3>
+                <div class="form-group">
+                    <label>Filtrar por Estado:</label>
+                    <select id="compromiso_filtro_estado" onchange="cargarCompromisos()">
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="Completado">Completado</option>
+                        <option value="No Completado">No Completado</option>
+                        <option value="Todos">Todos</option>
+                    </select>
+                </div>
+
                 <table>
                     <thead>
                         <tr><th>ID</th><th>Mes</th><th>Vendedor</th><th>Cliente</th><th>Clasificación</th><th>Estado</th></tr>
