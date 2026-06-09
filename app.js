@@ -2,6 +2,8 @@
 // WBR SISTEMA v3 - APP.JS
 // =======================================
 
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx22j9B_70xAc3ZEuTRpAeSXE4a4Mt9Q34vh_9pZHH-n8DJx59wLDv9bu-qR9JkwFQy/exec';
+
 let usuarioActual = 'Coordinador';
 let vendedoresData = [];
 let wbrHistorico = {};
@@ -41,6 +43,24 @@ function cargarDatos() {
 // FETCH
 // =======================================
 
+async function llamarAppScript(action, params = {}) {
+    const body = new URLSearchParams({
+        action: action,
+        ...params
+    });
+
+    try {
+        const response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            body: body
+        });
+        const data = await response.json();
+        return data;
+    } catch(error) {
+        console.error('Error:', error);
+        return { exito: false, mensaje: 'Error de conexión' };
+    }
+}
 
 // =======================================
 // SECCIONES
@@ -53,10 +73,6 @@ function showSection(sectionId) {
     document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
     event.target.classList.add('active');
 
-    if (sectionId === 'compromisos') {
-        cargarCompromisos();
-    }
-    
     if (sectionId === 'wbr') {
         cargarWBRHistorico();
     }
