@@ -92,6 +92,64 @@ function mostrarMensaje(elementId, mensaje, tipo) {
 }
 
 // =======================================
+// DASHBOARD
+// =======================================
+
+function loadDashboard() {
+    // Obtener mes actual
+    const now = new Date();
+    const mesActual = MESES[now.getMonth()];
+    
+    // Llamar a AppScript para obtener compromisos del mes
+    llamarAppScript('obtenerCompromisos', { mes: mesActual }).then(compromisos => {
+        // Contar totales
+        const totalCompromisos = compromisos.length;
+        const realizados = compromisos.filter(c => c.estado === 'Completado').length;
+        
+        // Contar por clasificación
+        const clasificacionA = compromisos.filter(c => c.clasificacion === 'A').length;
+        const clasificacionB = compromisos.filter(c => c.clasificacion === 'B').length;
+        const clasificacionC = compromisos.filter(c => c.clasificacion === 'C').length;
+        
+        // Generar HTML de métricas
+        const html = `
+            <div class="metric-card">
+                <h3>Compromisos</h3>
+                <div class="metric-number">${realizados}/${totalCompromisos}</div>
+                <div class="metric-subtitle">Realizados / Totales (${mesActual})</div>
+            </div>
+            
+            <div class="metric-card clasificacion-a">
+                <h3>Clasificación A</h3>
+                <div class="metric-number">${clasificacionA}</div>
+                <div class="metric-subtitle">Críticos</div>
+            </div>
+            
+            <div class="metric-card clasificacion-b">
+                <h3>Clasificación B</h3>
+                <div class="metric-number">${clasificacionB}</div>
+                <div class="metric-subtitle">Importantes</div>
+            </div>
+            
+            <div class="metric-card clasificacion-c">
+                <h3>Clasificación C</h3>
+                <div class="metric-number">${clasificacionC}</div>
+                <div class="metric-subtitle">Regulares</div>
+            </div>
+        `;
+        
+        document.getElementById('dashboardContent').innerHTML = html;
+        
+        // Nota tenue de conexión
+        const footerHtml = `<div class="connection-status connected">Conectado a Google Sheets</div>`;
+        document.getElementById('dashboardFooter').innerHTML = footerHtml;
+    }).catch(error => {
+        console.error('Error cargando dashboard:', error);
+        document.getElementById('dashboardFooter').innerHTML = '<div class="connection-status">Error de conexión</div>';
+    });
+}
+
+// =======================================
 // VENDEDORES
 // =======================================
 
@@ -195,27 +253,11 @@ function agregarCompromiso() {
             mostrarMensaje('compromisoMsg', '✅ Compromiso agregado', 'success');
             document.getElementById('compromiso_cliente').value = '';
             cargarCompromisos();
+            loadDashboard();
         } else {
             mostrarMensaje('compromisoMsg', '❌ Error: ' + response.mensaje, 'error');
         }
     });
-}
-
-// =======================================
-// DASHBOARD
-// =======================================
-
-function loadDashboard() {
-    const html = `
-        <div class="info-card">
-            <p><strong>Vendedores Activos:</strong> ${vendedoresData.filter(v => v.estado === 'Activo').length}</p>
-        </div>
-        <div class="info-card">
-            <p><strong>Sistema Activo:</strong> ✅ Conectado a Google Sheets</p>
-        </div>
-    `;
-    const dashDiv = document.getElementById('dashboardContent');
-    if (dashDiv) dashDiv.innerHTML = html;
 }
 
 // =======================================
@@ -265,6 +307,7 @@ function guardarEstados() {
             }
         });
         mostrarMensaje('estadosMsg', '✅ Estados guardados', 'success');
+        loadDashboard();
     });
 }
 
