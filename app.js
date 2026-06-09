@@ -295,29 +295,71 @@ function generarAcordeones() {
     const container = document.getElementById('wbrAccordionContainer');
     container.innerHTML = '';
     
-    MESES.forEach(mes => {
-        const accordion = document.createElement('div');
-        accordion.className = 'accordion-month';
+    // Obtener el mes actualmente seleccionado
+    const mesActivo = document.querySelector('.mes-item.active .mes-label').textContent;
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const MESES_COMPLETOS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const mesIndex = meses.indexOf(mesActivo);
+    const mesCompleto = MESES_COMPLETOS[mesIndex] || 'Junio';
+    
+    // Crear grid para las sesiones
+    const grid = document.createElement('div');
+    grid.style.display = 'grid';
+    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
+    grid.style.gap = '20px';
+    
+    const sesiones = wbrHistorico[mesCompleto] || [];
+    
+    if (sesiones.length === 0) {
+        container.innerHTML = '<p style="color: #666; padding: 20px;">No hay sesiones WBR para este mes</p>';
+        return;
+    }
+    
+    sesiones.forEach(sesion => {
+        const card = document.createElement('div');
+        card.style.background = 'white';
+        card.style.padding = '20px';
+        card.style.borderRadius = '8px';
+        card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+        card.style.borderLeft = '4px solid #667eea';
+        card.style.cursor = 'pointer';
+        card.style.transition = 'all 0.3s';
+        card.onmouseover = () => {
+            card.style.transform = 'translateY(-5px)';
+            card.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
+        };
+        card.onmouseout = () => {
+            card.style.transform = 'translateY(0)';
+            card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+        };
         
-        const header = document.createElement('div');
-        header.className = 'accordion-month-header collapsed';
-        header.textContent = `📅 ${mes}`;
-        header.onclick = () => toggleAccordion(header);
+        // Determinar color del estado
+        let colorEstado = '#667eea';
+        if (sesion.estado === 'Cerrada') colorEstado = '#e74c3c';
+        else if (sesion.estado === 'Abierta') colorEstado = '#27ae60';
+        else if (sesion.estado === 'Pendiente') colorEstado = '#f39c12';
         
-        const content = document.createElement('div');
-        content.className = 'accordion-month-content';
+        card.innerHTML = `
+            <div style="margin-bottom: 15px;">
+                <h4 style="color: #2c3e50; margin-bottom: 5px; font-size: 16px;">Semana ${sesion.semana}</h4>
+                <span style="display: inline-block; background: ${colorEstado}; color: white; padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: bold;">${sesion.estado}</span>
+            </div>
+            <div style="color: #666; font-size: 13px; margin-bottom: 15px;">
+                <p style="margin-bottom: 8px;"><strong>Compromisos:</strong> Por cargar</p>
+                <div style="width: 100%; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden;">
+                    <div style="width: 50%; height: 100%; background: #27ae60;"></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-success" style="flex: 1; padding: 8px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; background: #2c3e50; color: white;" onclick="abrirFormularioWBR('${sesion.mes}', ${sesion.semana})">Abrir</button>
+                ${sesion.estado === 'Cerrada' ? '<button class="btn-success" style="flex: 1; padding: 8px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; background: #3498db; color: white;" onclick="descargarPDFWBR(\'${sesion.mes}\', ${sesion.semana})">PDF</button>' : ''}
+            </div>
+        `;
         
-        const semanasEnMes = SEMANAS_POR_MES[mes] || 4;
-        for (let semana = 1; semana <= semanasEnMes; semana++) {
-            const wbrExistente = wbrHistorico[mes]?.find(w => w.semana === semana);
-            const weekRow = generarWeekRow(mes, semana, wbrExistente);
-            content.appendChild(weekRow);
-        }
-        
-        accordion.appendChild(header);
-        accordion.appendChild(content);
-        container.appendChild(accordion);
+        grid.appendChild(card);
     });
+    
+    container.appendChild(grid);
 }
 
 function toggleAccordion(header) {
