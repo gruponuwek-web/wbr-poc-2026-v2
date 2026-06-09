@@ -218,10 +218,7 @@ function cargarVendedoresWBR(mes, semana) {
                     <div class="wbr-vendedor-content ${index === 0 ? 'show' : ''}">
                         <div class="wbr-paso">
                             <div class="wbr-paso-titulo">PASO 1: Compromisos</div>
-                            <div id="paso1-${vendedor.id}" style="display: flex; gap: 20px; align-items: flex-start;">
-                                <div id="paso1-lista-${vendedor.id}" style="flex: 1;"><div class="loading"><div class="spinner"></div></div></div>
-                                <div id="paso1-botones-${vendedor.id}" style="flex: 0.5;"><div class="loading"><div class="spinner"></div></div></div>
-                            </div>
+                            <div id="paso1-${vendedor.id}" style="display: flex; flex-direction: column; gap: 10px;"><div class="loading"><div class="spinner"></div></div></div>
                         </div>
                         <div class="wbr-paso">
                             <div class="wbr-paso-titulo">PASO 2: Descubrimientos/Retos</div>
@@ -257,47 +254,29 @@ function cargarCompromisosWBR(mes, vendedor, vendedorId) {
     llamarAppScript('obtenerCompromisos', { mes }).then(compromisos => {
         const filtrados = compromisos.filter(c => c.vendedor === vendedor);
         
-        // Lado IZQUIERDO - Lista de compromisos
-        const listaHTML = filtrados.map(c => 
-            `<div style="padding: 5px; border-bottom: 1px solid #ecf0f1;">
-                ${c.cliente} - ${c.clasificacion}
-            </div>`
-        ).join('');
+        const html = filtrados.map(c => `
+            <div class="compromiso-fila">
+                <div class="compromiso-nombre">${c.cliente} - ${c.clasificacion}</div>
+                <select class="compromiso-dropdown ${(c.estado || 'Pendiente').toLowerCase().replace(' ', '-')}" 
+                        data-id="${c.id}" 
+                        onchange="toggleCompromiso('${c.id}', this)">
+                    <option value="Pendiente" ${c.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                    <option value="Completado" ${c.estado === 'Completado' ? 'selected' : ''}>Completado</option>
+                    <option value="No Completado" ${c.estado === 'No Completado' ? 'selected' : ''}>No Completado</option>
+                </select>
+            </div>
+        `).join('');
         
-        // Lado DERECHO - Botones toggle
-        const botonesHTML = filtrados.map(c => 
-            `<div style="display: flex; gap: 5px; margin-bottom: 10px;">
-                <button class="toggle-btn gris" data-id="${c.id}" data-estado="gris" onclick="toggleCompromiso('${c.id}', this)">○</button>
-                <button class="toggle-btn completado" data-id="${c.id}" data-estado="completado" onclick="toggleCompromiso('${c.id}', this)" style="opacity: 0.5;">✓</button>
-                <button class="toggle-btn no-completado" data-id="${c.id}" data-estado="no-completado" onclick="toggleCompromiso('${c.id}', this)" style="opacity: 0.5;">✗</button>
-            </div>`
-        ).join('');
-        
-        document.getElementById('paso1-lista-' + vendedorId).innerHTML = listaHTML || '<p>Sin compromisos</p>';
-        document.getElementById('paso1-botones-' + vendedorId).innerHTML = botonesHTML || '<p>-</p>';
+        document.getElementById('paso1-' + vendedorId).innerHTML = html || '<p>Sin compromisos</p>';
     });
 }
 
-function toggleCompromiso(idCompromiso, btnElement) {
-    const estadoActual = btnElement.getAttribute('data-estado');
-    let nuevoEstado;
+function toggleCompromiso(idCompromiso, selectElement) {
+    const nuevoEstado = selectElement.value;
     
-    if (estadoActual === 'gris') {
-        nuevoEstado = 'completado';
-    } else if (estadoActual === 'completado') {
-        nuevoEstado = 'no-completado';
-    } else {
-        nuevoEstado = 'gris';
-    }
-    
-    btnElement.setAttribute('data-estado', nuevoEstado);
-    
-    // Actualizar estilos de todos los botones en este grupo
-    const parent = btnElement.parentElement;
-    parent.querySelectorAll('button').forEach(btn => {
-        btn.style.opacity = '0.5';
-    });
-    btnElement.style.opacity = '1';
+    // Actualizar clase CSS según estado
+    selectElement.classList.remove('pendiente', 'completado', 'no-completado');
+    selectElement.classList.add(nuevoEstado.toLowerCase().replace(' ', '-'));
 }
 
 function cargarAccionesWBR(mes, vendedorId) {
@@ -383,13 +362,43 @@ function guardarAccion() {
 }
 
 function guardarVendedorWBR(vendedorId, vendedorNombre, mes, semana) {
+    // 1. RECOPILAR ESTADOS DE COMPROMISOS (PASO 1)
+    const paso1Selects = document.querySelectorAll(`[data-vendedor-id="${vendedorId}"] .compromiso-dropdown`);
+    const estadosCompromisos = [];
+    paso1Selects.forEach(select => {
+        estadosCompromisos.push({
+            id: select.getAttribute('data-id'),
+            estado: select.value
+        });
+    });
+    
+    // 2. RECOPILAR DESCUBRIMIENTOS (PASO 2)
     const descubrimientos = document.getElementById('paso2-' + vendedorId).value;
-    llamarAppScript('guardarWBRResumen', {
+    
+    // 3. RECOPILAR ACCIONES (PASO 3) - desde tabla
+    const paso3Table = document.querySelector(`[data-vendedor-id="${vendedorId}"] .wbr-tabla tbody`);
+    const acciones = [];
+    if (paso3Table) {
+        paso3Table.querySelectorAll('tr').forEach(row => {
+            acciones.push({
+                tipo: row.cells[0]?.textContent,
+                descripcion: row.cells[1]?.textContent,
+                vencimiento: row.cells[2]?.textContent,
+                responsable: row.cells[3]?.textContent
+            });
+        });
+    }
+    
+    // 4. ENVIAR TODO A APPSCRIPT
+    llamarAppScript('guardarWBRCompleto', {
         mes, semana, vendedor: vendedorNombre,
-        descubrimientosRetos: descubrimientos,
+        estadosCompromisos: JSON.stringify(estadosCompromisos),
+        descubrimientos: descubrimientos,
+        acciones: JSON.stringify(acciones),
         usuario: usuarioActual
     }).then(response => {
         if (response.exito) {
+            // Cambiar header a "Guardado"
             const header = document.querySelector(`[data-vendedor-id="${vendedorId}"] .wbr-vendedor-header`);
             header.innerHTML = `
                 <div class="wbr-vendedor-info">
@@ -398,8 +407,12 @@ function guardarVendedorWBR(vendedorId, vendedorNombre, mes, semana) {
                 </div>
                 <button class="btn-info" onclick="editarVendedorWBR('${vendedorId}')">Editar</button>
             `;
+            
+            // Cerrar acordeón
             const content = document.querySelector(`[data-vendedor-id="${vendedorId}"] .wbr-vendedor-content`);
             content.classList.remove('show');
+            
+            alert('Vendedor guardado ✅');
         }
     });
 }
