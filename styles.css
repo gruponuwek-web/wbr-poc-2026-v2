@@ -39,7 +39,7 @@ body {
 .section.active { display: block; }
 .section h2 { color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
 
-/* DASHBOARD - 4 CUADRITOS */
+/* DASHBOARD */
 #dashboardContent {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -58,7 +58,6 @@ body {
 .dashboard-card.prospección { border-left-color: #27ae60; }
 .dashboard-card.crecimiento { border-left-color: #3498db; }
 .dashboard-card.recuperado { border-left-color: #f39c12; }
-.dashboard-card.total { border-left-color: #667eea; }
 
 .dashboard-card h3 {
     color: #2c3e50;
@@ -112,12 +111,6 @@ body {
     font-family: inherit;
 }
 
-.form-group input:focus, .form-group select:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
-}
-
 /* FILTRO */
 .filter-container {
     margin-bottom: 20px;
@@ -161,24 +154,160 @@ tr:hover {
     background: #f8f9fa;
 }
 
-/* BOTONES TOGGLE */
-.toggle-btn {
-    padding: 10px 15px;
-    margin: 5px;
-    border: 2px solid #bdc3c7;
-    border-radius: 5px;
-    background: #f9f9f9;
-    color: #2c3e50;
+/* WBR - TABS */
+.wbr-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid #ecf0f1;
+    margin-bottom: 20px;
+}
+
+.wbr-tab {
+    padding: 12px 20px;
+    background: none;
+    border: none;
     cursor: pointer;
-    font-size: 13px;
-    font-weight: bold;
+    font-size: 14px;
+    color: #666;
+    border-bottom: 3px solid transparent;
     transition: all 0.3s;
 }
 
-.toggle-btn.gris {
+.wbr-tab.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+}
+
+/* WBR - VISTA PRE-SESIÓN */
+.wbr-vista-pre {
+    padding: 20px;
+}
+
+.wbr-header-pre {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.wbr-header-pre span {
+    font-size: 16px;
+    color: #2c3e50;
+    font-weight: bold;
+}
+
+/* WBR - VISTA POST-SESIÓN */
+.wbr-header-post {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #ecf0f1;
+    margin-bottom: 20px;
+}
+
+.wbr-header-post h3 {
+    color: #2c3e50;
+    margin: 0;
+}
+
+.wbr-botones-header {
+    display: flex;
+    gap: 10px;
+}
+
+/* WBR - ACORDEONES */
+.wbr-vendedor {
+    background: white;
+    border: 1px solid #ecf0f1;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    overflow: hidden;
+}
+
+.wbr-vendedor-header {
+    background: #f9f9f9;
+    padding: 15px 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.3s;
+}
+
+.wbr-vendedor-header:hover {
     background: #ecf0f1;
-    border-color: #bdc3c7;
+}
+
+.wbr-vendedor-info {
+    flex: 1;
+}
+
+.wbr-vendedor-nombre {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.wbr-vendedor-status {
+    font-size: 12px;
+    margin-top: 5px;
+    color: #f39c12;
+}
+
+.wbr-vendedor-status.guardado {
+    color: #27ae60;
+}
+
+.wbr-vendedor-toggle {
+    color: #667eea;
+}
+
+.wbr-vendedor-content {
+    display: none;
+    padding: 20px;
+    border-top: 1px solid #ecf0f1;
+}
+
+.wbr-vendedor-content.show {
+    display: block;
+}
+
+/* WBR - PASOS */
+.wbr-paso {
+    margin-bottom: 20px;
+}
+
+.wbr-paso-titulo {
+    font-weight: bold;
+    color: #667eea;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.wbr-textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 10px;
+    border: 1px solid #bdc3c7;
+    border-radius: 5px;
+    font-family: inherit;
+}
+
+/* BOTONES TOGGLE */
+.toggle-btn {
+    padding: 8px 12px;
+    margin: 5px;
+    border: 2px solid #bdc3c7;
+    border-radius: 5px;
+    background: #ecf0f1;
     color: #666;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    transition: all 0.3s;
 }
 
 .toggle-btn.completado {
@@ -195,18 +324,49 @@ tr:hover {
 
 .toggle-btn:hover {
     transform: scale(1.05);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
-/* CONTENEDOR TOGGLES */
-.compromiso-toggle-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 15px;
+/* TABLA WBR */
+.wbr-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.wbr-tabla th {
+    background: #667eea;
+    color: white;
+    padding: 10px;
+    text-align: left;
+}
+
+.wbr-tabla td {
+    padding: 10px;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.wbr-tabla tr:hover {
     background: #f9f9f9;
+}
+
+/* BOTONES */
+.btn-primary, .btn-success, .btn-danger, .btn-info {
+    padding: 10px 20px;
+    border: none;
     border-radius: 5px;
-    margin-bottom: 15px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: opacity 0.2s;
+}
+
+.btn-primary { background: #667eea; color: white; }
+.btn-success { background: #27ae60; color: white; }
+.btn-danger { background: #e74c3c; color: white; }
+.btn-info { background: #3498db; color: white; }
+
+.btn-primary:hover, .btn-success:hover, .btn-danger:hover, .btn-info:hover {
+    opacity: 0.9;
 }
 
 /* LOADING */
