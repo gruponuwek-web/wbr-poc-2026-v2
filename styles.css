@@ -1,342 +1,308 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WBR Sistema v3 - Gestión Comercial</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-<div class="app-container">
-    <nav class="navbar">
-        <h1>WBR Sistema v3 - Gestión Comercial</h1>
-        <div class="user-info">
-            <span id="fechaHora">--/--/---- --:--</span>
-            <span id="usuarioActual">Coordinador</span>
-        </div>
-    </nav>
+/* =======================================
+   WBR SISTEMA v3 - STYLES.CSS
+   ARCHIVO VISUAL PURO - NUNCA TOCA LÓGICA
+   ======================================= */
 
-    <div class="sidebar">
-        <aside class="menu">
-            <button class="menu-btn" onclick="showSection('dashboard')">📊 Dashboard</button>
-            <button class="menu-btn" onclick="showSection('vendedores')">👥 Vendedores</button>
-            <button class="menu-btn" onclick="showSection('compromisos')">📝 Compromisos</button>
-            <button class="menu-btn" onclick="showSection('wbr')">📅 Weekly Business Review</button>
-            <button class="menu-btn" onclick="showSection('acciones')">⚡ Acciones</button>
-            <hr style="margin: 20px 0; border: none; border-top: 1px solid #555;">
-            <button class="menu-btn" onclick="showSection('testacciones')">🧪 Test - Acciones</button>
-            <button class="menu-btn" onclick="showSection('testdesc')">🧪 Test - Descubrimientos</button>
-            <button class="menu-btn" onclick="showSection('test')">🧪 Test - Compromiso</button>
-            <button class="menu-btn" onclick="showSection('estados')">✅ Test - Estados</button>
-        </aside>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-        <div class="content">
-            <!-- DASHBOARD -->
-            <section id="dashboard" class="section active">
-                <h2>📊 Dashboard</h2>
-                <div id="dashboardContent" class="loading">
-                    <div class="spinner"></div>Cargando dashboard...
-                </div>
-            </section>
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #ecf0f1;
+}
 
-            <!-- VENDEDORES -->
-            <section id="vendedores" class="section">
-                <h2>👥 Gestión de Vendedores</h2>
-                <div class="form-group">
-                    <label>Agregar Vendedor:</label>
-                    <input type="text" id="nuevoVendedor" placeholder="Nombre del vendedor">
-                    <button class="btn-success" onclick="agregarVendedor()">Agregar</button>
-                    <div id="vendedorMsg"></div>
-                </div>
-                <h3>Vendedores Registrados</h3>
-                <table>
-                    <thead>
-                        <tr><th>ID</th><th>Nombre</th><th>Estado</th><th>Acción</th></tr>
-                    </thead>
-                    <tbody id="vendedorTableBody">
-                        <tr><td colspan="4" class="loading"><div class="spinner"></div></td></tr>
-                    </tbody>
-                </table>
-            </section>
+.app-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 100vh;
+}
 
-            <!-- COMPROMISOS -->
-            <section id="compromisos" class="section">
-                <h2>📝 Agregar Compromiso</h2>
-                <div class="form-group inline">
-                    <div>
-                        <label>Mes:</label>
-                        <select id="compromiso_mes">
-                            <option value="Junio" selected>Junio</option>
-                            <option value="Julio">Julio</option>
-                            <option value="Agosto">Agosto</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>Vendedor:</label>
-                        <select id="compromiso_vendedor"></select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Cliente:</label>
-                    <input type="text" id="compromiso_cliente" placeholder="Nombre del cliente">
-                </div>
-                <div class="form-group">
-                    <label>Clasificación:</label>
-                    <select id="compromiso_clasificacion">
-                        <option value="A">A - Crítico</option>
-                        <option value="B">B - Importante</option>
-                        <option value="C">C - Regular</option>
-                    </select>
-                </div>
-                <button class="btn-success" onclick="agregarCompromiso()">Guardar Compromiso</button>
-                <div id="compromisoMsg"></div>
-                <table>
-                    <thead>
-                        <tr><th>ID</th><th>Mes</th><th>Vendedor</th><th>Cliente</th><th>Clasificación</th><th>Estado</th></tr>
-                    </thead>
-                    <tbody id="compromiso_tabla">
-                        <tr><td colspan="6" class="loading"><div class="spinner"></div></td></tr>
-                    </tbody>
-                </table>
-            </section>
+.navbar {
+    background: #2c3e50;
+    color: white;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
 
-            <!-- TEST ACCIONES -->
-            <section id="testacciones" class="section">
-                <h2>🧪 Test - Guardar Acciones</h2>
-                <h3>📋 Crear Acción del Mes</h3>
-                <div class="form-group inline">
-                    <div>
-                        <label>Mes:</label>
-                        <select id="testa_mes">
-                            <option value="Junio">Junio</option>
-                            <option value="Julio">Julio</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Descripción de Acción:</label>
-                    <textarea id="testa_descripcion" placeholder="Detalle..."></textarea>
-                </div>
-                <div class="form-group inline">
-                    <div>
-                        <label>Responsable:</label>
-                        <input type="text" id="testa_responsable" placeholder="Nombre">
-                    </div>
-                    <div>
-                        <label>Fecha Vencimiento:</label>
-                        <input type="date" id="testa_fecha">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Estado Inicial:</label>
-                    <select id="testa_estado">
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="En Progreso">En Progreso</option>
-                        <option value="Completado">Completado</option>
-                    </select>
-                </div>
-                <button class="btn-success" onclick="testAccionGuardar()">Guardar Acción</button>
-                <div id="testaMsg" style="margin-top: 15px;"></div>
+.navbar h1 { font-size: 24px; }
+.user-info { display: flex; gap: 20px; align-items: center; }
 
-                <hr style="margin: 30px 0; border: none; border-top: 2px solid #ddd;">
+.sidebar { display: flex; height: calc(100vh - 70px); }
+.menu { background: #34495e; color: white; width: 250px; padding: 20px 0; overflow-y: auto; }
+.menu button { width: 100%; text-align: left; padding: 15px 25px; border: none; background: none; color: #ecf0f1; cursor: pointer; font-size: 14px; transition: all 0.3s; border-left: 4px solid transparent; }
+.menu button:hover, .menu button.active { background: #2c3e50; border-left-color: #667eea; color: #667eea; }
 
-                <h3>📋 Acciones del Mes - Cambiar Estado</h3>
-                <div class="form-group">
-                    <label>Mes:</label>
-                    <select id="listacc_mes" onchange="cargarAccionesTest()">
-                        <option value="Junio">Junio</option>
-                        <option value="Julio">Julio</option>
-                    </select>
-                </div>
-                <div id="listaAccionesTest" style="margin-top: 20px;"></div>
-            </section>
+.content { flex: 1; padding: 30px; overflow-y: auto; }
+.section { display: none; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+.section.active { display: block; }
+.section h2 { color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
 
-            <!-- TEST DESCUBRIMIENTOS -->
-            <section id="testdesc" class="section">
-                <h2>📝 Test - Guardar Descubrimientos/Retos</h2>
-                <div class="form-group inline">
-                    <div>
-                        <label>Mes:</label>
-                        <select id="testdesc_mes">
-                            <option value="Junio">Junio</option>
-                            <option value="Julio">Julio</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>Semana (1-52):</label>
-                        <input type="number" id="testdesc_semana" min="1" max="52" value="23" placeholder="23">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Vendedor:</label>
-                    <select id="testdesc_vendedor">
-                        <option value="">-- Cargando --</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Descubrimientos y Retos:</label>
-                    <textarea id="testdesc_texto" placeholder="Escribe aquí..." style="min-height: 150px;"></textarea>
-                </div>
-                <button class="btn-success" onclick="testDescGuardar()">Guardar AHORA</button>
-                <div id="testdescMsg" style="margin-top: 15px;"></div>
-            </section>
+.form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
+.form-group label { margin-bottom: 5px; color: #2c3e50; font-weight: bold; }
+.form-group input, .form-group select, .form-group textarea { padding: 10px; border: 1px solid #bdc3c7; border-radius: 5px; font-size: 14px; font-family: inherit; }
+.form-group textarea { resize: vertical; min-height: 100px; }
+.form-group.inline { flex-direction: row; gap: 15px; }
+.form-group.inline > div { flex: 1; display: flex; flex-direction: column; }
 
-            <!-- TEST COMPROMISO -->
-            <section id="test" class="section">
-                <h2>🧪 Test - Actualizar 1 Compromiso</h2>
-                <div class="form-group">
-                    <label>ID del Compromiso (ej: C_1717939200000):</label>
-                    <input type="text" id="test_id" placeholder="C_xxx">
-                </div>
-                <div class="form-group">
-                    <label>Nuevo Estado:</label>
-                    <select id="test_estado">
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="Completado">Completado</option>
-                        <option value="No Completado">No Completado</option>
-                    </select>
-                </div>
-                <button class="btn-success" onclick="testActualizar()" style="margin-top: 10px;">Actualizar AHORA</button>
-                <div id="testMsg" style="margin-top: 15px;"></div>
-            </section>
+/* CUADRADOS DE ESTADO */
+.estado-item {
+    background: #f9f9f9;
+    padding: 15px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #ecf0f1;
+}
 
-            <!-- ESTADOS -->
-            <section id="estados" class="section">
-                <h2>✅ Gestión de Estados - Compromisos</h2>
-                <div class="form-group inline">
-                    <div style="flex: 1;">
-                        <label>Mes:</label>
-                        <select id="estados_mes">
-                            <option value="Junio" selected>Junio</option>
-                            <option value="Julio">Julio</option>
-                            <option value="Agosto">Agosto</option>
-                        </select>
-                    </div>
-                    <div style="display: flex; align-items: flex-end; flex: 0.5;">
-                        <button class="btn-info" onclick="cargarEstados()" style="margin: 0; width: 100%;">📂 Cargar</button>
-                    </div>
-                </div>
-                <div id="estadosContent" class="loading"><div class="spinner"></div>Selecciona un mes y haz click en "Cargar"</div>
-                <button class="btn-success" id="btnGuardarEstados" onclick="guardarEstados()" style="margin-top: 20px;">Guardar Cambios</button>
-                <div id="estadosMsg"></div>
-            </section>
+.estado-label {
+    flex: 1;
+}
 
-            <!-- WBR -->
-            <section id="wbr" class="section">
-                <div class="wbr-container">
-                    <!-- TABS -->
-                    <div class="wbr-tabs">
-                        <button class="wbr-tab active" id="tab-nueva-sesion" onclick="mostrarTab('nueva-sesion')">📅 Nueva sesión</button>
-                        <button class="wbr-tab" id="tab-historial" onclick="mostrarTab('historial')">📋 Historial</button>
-                    </div>
+.estado-label strong {
+    color: #2c3e50;
+    display: block;
+    margin-bottom: 3px;
+}
 
-                    <!-- NUEVA SESIÓN -->
-                    <div class="wbr-content" id="contenido-nueva-sesion">
-                        <div id="wbr-vista-pre-sesion" class="wbr-vista-pre-sesion">
-                            <div class="wbr-header-pre">
-                                <div class="wbr-info">
-                                    <span class="wbr-mes" id="wbr-mes-display-pre">Junio</span>
-                                    <span class="wbr-separator">|</span>
-                                    <span class="wbr-semana" id="wbr-semana-display-pre"># Semana 24 de 52</span>
-                                </div>
-                                <button class="btn-success" onclick="crearNuevaWBR()">➕ Crear Sesión</button>
-                            </div>
-                        </div>
+.estado-label small {
+    color: #999;
+    font-size: 12px;
+}
 
-                        <div id="wbr-vista-sesion-abierta" class="wbr-vista-sesion-abierta" style="display: none;">
-                            <div class="wbr-sesion-header">
-                                <h3 id="wbr-titulo-sesion">WBR - Junio Semana 24</h3>
-                                <div class="wbr-sesion-botones">
-                                    <button class="btn-primary" id="btn-descargar-pdf" onclick="descargarPDFWBR()" style="display: none;">📄 PDF</button>
-                                    <button class="btn-danger" id="btn-cerrar-wbr" onclick="cerrarWBR()">🔒 Cerrar Sesión</button>
-                                </div>
-                            </div>
-                            <div id="wbr-vendedores-container" class="wbr-vendedores"></div>
-                        </div>
-                    </div>
+.estado-select {
+    padding: 8px 12px;
+    border: 1px solid #bdc3c7;
+    border-radius: 5px;
+    font-size: 13px;
+    cursor: pointer;
+    background: white;
+    color: #2c3e50;
+    font-weight: bold;
+    min-width: 150px;
+}
 
-                    <!-- HISTORIAL -->
-                    <div class="wbr-content" id="contenido-historial" style="display: none;">
-                        <h3>📋 Historial de Sesiones WBR</h3>
-                        <div id="wbr-historial-list" class="wbr-historial-list"></div>
-                    </div>
-                </div>
-            </section>
+.estado-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+}
 
-            <!-- MODAL DE ACCIONES -->
-            <div id="modalAccion" class="modal" style="display: none;">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h3>➕ Agregar Acción</h3>
-                        <button class="modal-close" onclick="cerrarModalAccion()">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label>Fecha:</label>
-                            <input type="date" id="accion_fecha" placeholder="Seleccionar fecha">
-                        </div>
-                        <div class="form-group">
-                            <label>Tipo:</label>
-                            <div style="display: flex; gap: 10px;">
-                                <select id="accion_tipo" onchange="mostrarInputOtra()">
-                                    <option value="">-- Seleccionar --</option>
-                                    <option value="Llamada">Llamada</option>
-                                    <option value="Acompañamiento">Acompañamiento</option>
-                                    <option value="Reunión">Reunión</option>
-                                    <option value="Capacitación">Capacitación</option>
-                                    <option value="Asesoría">Asesoría</option>
-                                    <option value="Estrategia">Estrategia</option>
-                                    <option value="Visita">Visita</option>
-                                    <option value="Presentación">Presentación</option>
-                                    <option value="Negociación">Negociación</option>
-                                    <option value="Reporte/Análisis">Reporte/Análisis</option>
-                                    <option value="Otra">Otra</option>
-                                </select>
-                                <input type="text" id="accion_tipo_otra" placeholder="Especificar tipo" style="display: none; flex: 1;">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Vendedor:</label>
-                            <select id="accion_vendedor" disabled></select>
-                        </div>
-                        <div class="form-group">
-                            <label>Descripción:</label>
-                            <textarea id="accion_descripcion" placeholder="Detalle de la acción..." style="min-height: 80px;"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Responsable:</label>
-                            <input type="text" id="accion_responsable" placeholder="Quién ejecutará esta acción">
-                        </div>
-                        <div class="form-group">
-                            <label>Vencimiento:</label>
-                            <input type="date" id="accion_vencimiento">
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn-secondary" onclick="cerrarModalAccion()">Cancelar</button>
-                        <button class="btn-success" onclick="guardarAccion()">Guardar Acción</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+.btn-primary, .btn-success, .btn-danger, .btn-warning, .btn-info { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; margin-top: 10px; margin-right: 10px; transition: opacity 0.2s; }
+.btn-primary { background: #667eea; color: white; }
+.btn-success { background: #27ae60; color: white; }
+.btn-danger { background: #e74c3c; color: white; }
+.btn-warning { background: #f39c12; color: white; }
+.btn-info { background: #3498db; color: white; }
+.btn-primary:disabled, .btn-success:disabled { opacity: 0.6; cursor: not-allowed; }
 
-<!-- MODAL PARA LLENAR WBR -->
-<div id="wbrFormModal">
-    <div>
-        <h2 id="wbrFormTitle">WBR</h2>
-        <div id="wbrFormContent"></div>
-        <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
-            <button class="btn-danger" onclick="cerrarWBRForm()">Cancelar</button>
-            <button class="btn-success" id="btnGuardarWBR" onclick="guardarWBRCompleta()">Guardar y Cerrar WBR</button>
-        </div>
-    </div>
-</div>
+.message { padding: 15px; border-radius: 5px; margin-bottom: 15px; }
+.message.success { background: #d5f4e6; color: #27ae60; border-left: 4px solid #27ae60; }
+.message.error { background: #fadbd8; color: #e74c3c; border-left: 4px solid #e74c3c; }
 
-<!-- IMPORTAR ARCHIVOS EN ORDEN -->
-<script src="api-handler.js"></script>
-<script src="app.js"></script>
-</body>
-</html>
+.loading { text-align: center; color: #667eea; font-style: italic; padding: 20px; }
+.spinner { border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 10px auto; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+th { background: #667eea; color: white; padding: 12px; text-align: left; }
+td { padding: 12px; border-bottom: 1px solid #ecf0f1; }
+tr:hover { background: #f8f9fa; }
+
+.badge { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+.badge-activo { background: #d5f4e6; color: #27ae60; }
+.badge-pausado { background: #fadbd8; color: #e74c3c; }
+
+.info-card { background: #f9f9f9; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea; margin-bottom: 15px; }
+.info-card p { margin: 5px 0; color: #2c3e50; }
+.info-card strong { color: #667eea; }
+
+/* ACORDEÓN */
+.wbr-accordion {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.accordion-month { background: white; border: 1px solid #ecf0f1; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 5px rgba(0,0,0,0.08); }
+.accordion-month-header { background: #667eea; color: white; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: bold; transition: background 0.3s; }
+.accordion-month-header:hover { background: #5568d3; }
+.accordion-month-header.collapsed::after { content: "▶"; transition: transform 0.3s; }
+.accordion-month-header.expanded::after { content: "▼"; }
+.accordion-month-content { display: none; padding: 20px; }
+.accordion-month-content.show { display: block; }
+
+.week-row { background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 15px; border-left: 4px solid #667eea; display: flex; justify-content: space-between; align-items: center; }
+.week-info { flex: 1; }
+.week-info h4 { color: #2c3e50; margin-bottom: 5px; }
+.week-info p { color: #666; font-size: 12px; }
+.week-actions { display: flex; gap: 10px; }
+
+/* PASOS HORIZONTALES */
+.steps-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; margin-top: 20px; }
+.step { background: #f9f9f9; padding: 15px; border-radius: 5px; border-left: 4px solid #667eea; }
+.step h4 { color: #667eea; margin-bottom: 10px; font-size: 14px; text-align: center; }
+.step-number { display: inline-block; background: #667eea; color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; margin-right: 5px; }
+
+.compromise-item { display: flex; align-items: center; padding: 8px; background: white; margin-bottom: 6px; border-radius: 4px; border: 1px solid #ecf0f1; }
+.compromise-item input[type="checkbox"] { margin-right: 8px; width: 16px; height: 16px; cursor: pointer; }
+.compromise-item label { cursor: pointer; flex: 1; margin: 0; font-size: 13px; }
+
+/* MODAL */
+#wbrFormModal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.6);
+    padding: 50px 20px;
+    overflow-y: auto;
+}
+
+#wbrFormModal.show {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 20px;
+}
+
+#wbrFormModal > div {
+    background-color: #fefefe;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    max-width: 600px;
+    width: 100%;
+}
+
+h3 { color: #2c3e50; margin-top: 20px; margin-bottom: 15px; }
+hr { margin: 30px 0; border: none; border-top: 1px solid #ddd; }
+
+/* =======================================
+   MODAL - AGREGAR ACCIÓN
+   ======================================= */
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.3s;
+}
+
+.modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    width: 90%;
+    max-width: 500px;
+    overflow: hidden;
+    animation: slideIn 0.3s;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    background: #667eea;
+    color: white;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: white;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close:hover {
+    opacity: 0.8;
+}
+
+.modal-body {
+    padding: 20px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.modal-body .form-group {
+    margin-bottom: 15px;
+}
+
+.modal-body textarea {
+    font-family: Arial, sans-serif;
+    resize: vertical;
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    background: #f9f9f9;
+    border-top: 1px solid #ecf0f1;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.modal-footer .btn-secondary {
+    background: #bdc3c7;
+    color: white;
+    padding: 8px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.modal-footer .btn-secondary:hover {
+    background: #95a5a6;
+}
