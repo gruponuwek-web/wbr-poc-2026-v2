@@ -97,8 +97,42 @@
                 <!-- WBR -->
                 <section id="wbr" class="section">
                     <h2>📅 Weekly Business Review</h2>
-                    <div id="wbrContent">
-                        <div class="loading"><div class="spinner"></div></div>
+                    
+                    <!-- TABS -->
+                    <div class="wbr-tabs">
+                        <button class="wbr-tab active" onclick="mostrarTab('nueva-sesion')">📅 Nueva sesión</button>
+                        <button class="wbr-tab" onclick="mostrarTab('historial')">📋 Historial</button>
+                    </div>
+                    
+                    <!-- VISTA 1: PRE-SESIÓN -->
+                    <div id="vista-pre-sesion" class="wbr-vista-pre">
+                        <div class="wbr-header-pre">
+                            <div>
+                                <span id="mes-display">Junio</span>
+                                <span> | # Semana <span id="semana-display">24</span> de 52</span>
+                            </div>
+                            <button class="btn-success" onclick="crearNuevaWBR()">➕ Crear Sesión</button>
+                        </div>
+                    </div>
+                    
+                    <!-- VISTA 2: POST-SESIÓN -->
+                    <div id="vista-post-sesion" style="display: none;">
+                        <div class="wbr-header-post">
+                            <h3 id="titulo-sesion">WBR - Junio Semana 24</h3>
+                            <div class="wbr-botones-header">
+                                <button class="btn-primary" onclick="descargarPDF()" style="display: none;" id="btn-pdf">📄 PDF</button>
+                                <button class="btn-danger" onclick="cerrarWBR()">🔒 Cerrar Sesión</button>
+                            </div>
+                        </div>
+                        
+                        <!-- ACORDEONES VENDEDORES -->
+                        <div id="wbr-vendedores-container" class="wbr-vendedores"></div>
+                    </div>
+                    
+                    <!-- HISTORIAL -->
+                    <div id="vista-historial" style="display: none;">
+                        <h3>📋 Historial de Sesiones</h3>
+                        <div id="wbr-historial-list"></div>
                     </div>
                 </section>
             </div>
