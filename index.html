@@ -184,6 +184,7 @@
             <button class="menu-btn" onclick="showSection('test')">🧪 Test Estado</button>
             <button class="menu-btn" onclick="showSection('testdesc')">📝 Test Desc/Retos</button>
             <button class="menu-btn" onclick="showSection('testacciones')">⚡ Test Acciones</button>
+            <button class="menu-btn" onclick="showSection('testacc')">🔄 Test Actualizar Acción</button>
             <button class="menu-btn" onclick="showSection('estados')">✅ Estados</button>
             <button class="menu-btn" onclick="showSection('wbr')">📅 WBR</button>
             <button class="menu-btn" onclick="showSection('acciones')">⚡ Acciones</button>
@@ -230,70 +231,104 @@
                 </table>
             </section>
 
-            <!-- TEST ACCIONES -->
-            <section id="testacciones" class="section">
-                <h2>⚡ Test Simple - Guardar Acción/Tarea</h2>
-                
-                <div class="form-group inline">
-                    <div>
-                        <label>Mes:</label>
-                        <select id="testa_mes">
-                            <option value="Junio">Junio</option>
-                            <option value="Julio">Julio</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>Semana (1-52):</label>
-                        <input type="number" id="testa_semana" min="1" max="52" value="23">
-                    </div>
-                </div>
-
-                <div class="form-group inline">
-                    <div>
-                        <label>Tipo:</label>
-                        <select id="testa_tipo">
-                            <option value="Seguimiento">Seguimiento</option>
-                            <option value="Actividad">Actividad</option>
-                            <option value="Tarea">Tarea</option>
-                            <option value="Llamada">Llamada</option>
-                            <option value="Reunión">Reunión</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>Vendedor:</label>
-                        <select id="testa_vendedor">
-                            <option value="">-- Cargando --</option>
-                        </select>
-                    </div>
-                </div>
-
+            <!-- TEST ACTUALIZAR ACCIÓN -->
+            <section id="testacc" class="section">
+                <h2>🔄 Test Simple - Actualizar Estado de Acción</h2>
                 <div class="form-group">
-                    <label>Descripción:</label>
-                    <textarea id="testa_descripcion" placeholder="Detalla la tarea..." style="min-height: 100px;"></textarea>
+                    <label>ID de la Acción (ej: A_1717939200000):</label>
+                    <input type="text" id="testacc_id" placeholder="A_xxx">
                 </div>
-
-                <div class="form-group inline">
-                    <div>
-                        <label>Responsable:</label>
-                        <input type="text" id="testa_responsable" placeholder="Nombre">
-                    </div>
-                    <div>
-                        <label>Fecha Vencimiento:</label>
-                        <input type="date" id="testa_fecha">
-                    </div>
-                </div>
-
                 <div class="form-group">
-                    <label>Estado Inicial:</label>
-                    <select id="testa_estado">
+                    <label>Nuevo Estado:</label>
+                    <select id="testacc_estado">
                         <option value="Pendiente">Pendiente</option>
                         <option value="En Progreso">En Progreso</option>
                         <option value="Completado">Completado</option>
                     </select>
                 </div>
+                <button class="btn-success" onclick="testAccActualizar()" style="margin-top: 10px;">Actualizar AHORA</button>
+                <div id="testaccMsg" style="margin-top: 15px;"></div>
+            </section>
+            <section id="testacciones" class="section">
+                <h2>⚡ Test Acciones - Crear y Actualizar</h2>
+                
+                <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+                    <h3 style="margin-top: 0;">📝 Crear Nueva Acción</h3>
+                    
+                    <div class="form-group inline">
+                        <div>
+                            <label>Mes:</label>
+                            <select id="testa_mes">
+                                <option value="Junio">Junio</option>
+                                <option value="Julio">Julio</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Semana (1-52):</label>
+                            <input type="number" id="testa_semana" min="1" max="52" value="23">
+                        </div>
+                    </div>
 
-                <button class="btn-success" onclick="testAccionGuardar()">Guardar AHORA</button>
-                <div id="testaMsg" style="margin-top: 15px;"></div>
+                    <div class="form-group inline">
+                        <div>
+                            <label>Tipo:</label>
+                            <select id="testa_tipo">
+                                <option value="Seguimiento">Seguimiento</option>
+                                <option value="Actividad">Actividad</option>
+                                <option value="Tarea">Tarea</option>
+                                <option value="Llamada">Llamada</option>
+                                <option value="Reunión">Reunión</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Vendedor:</label>
+                            <select id="testa_vendedor">
+                                <option value="">-- Cargando --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Descripción:</label>
+                        <textarea id="testa_descripcion" placeholder="Detalla la tarea..." style="min-height: 100px;"></textarea>
+                    </div>
+
+                    <div class="form-group inline">
+                        <div>
+                            <label>Responsable:</label>
+                            <input type="text" id="testa_responsable" placeholder="Nombre">
+                        </div>
+                        <div>
+                            <label>Fecha Vencimiento:</label>
+                            <input type="date" id="testa_fecha">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Estado Inicial:</label>
+                        <select id="testa_estado">
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="En Progreso">En Progreso</option>
+                            <option value="Completado">Completado</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-success" onclick="testAccionGuardar()">Guardar Acción</button>
+                    <div id="testaMsg" style="margin-top: 15px;"></div>
+                </div>
+
+                <hr style="margin: 30px 0; border: none; border-top: 2px solid #ddd;">
+
+                <h3>📋 Acciones del Mes - Cambiar Estado</h3>
+                <div class="form-group">
+                    <label>Mes:</label>
+                    <select id="listacc_mes" onchange="cargarAccionesTest()">
+                        <option value="Junio">Junio</option>
+                        <option value="Julio">Julio</option>
+                    </select>
+                </div>
+
+                <div id="listaAccionesTest" style="margin-top: 20px;"></div>
             </section>
             <section id="testdesc" class="section">
                 <h2>📝 Test Simple - Guardar Descubrimientos/Retos</h2>
