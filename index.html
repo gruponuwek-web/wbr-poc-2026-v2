@@ -150,12 +150,22 @@
                     
                     <!-- VISTA SEMANAL (KANBAN) -->
                     <div id="vista-semanal" class="acciones-vista active">
+                        <div class="acciones-navegacion">
+                            <button class="nav-flecha" onclick="avanzarSemana(-1)">◄</button>
+                            <span id="semana-titulo" class="nav-titulo">Semana 24 (08-14 Junio)</span>
+                            <button class="nav-flecha" onclick="avanzarSemana(1)">►</button>
+                        </div>
                         <div class="kanban-container" id="kanban-semanal"></div>
                         <div class="acciones-clasificadas" id="clasificadas-semanal"></div>
                     </div>
                     
                     <!-- VISTA MENSUAL -->
                     <div id="vista-mensual" class="acciones-vista">
+                        <div class="acciones-navegacion">
+                            <button class="nav-flecha" onclick="avanzarMes(-1)">◄</button>
+                            <span id="mes-titulo" class="nav-titulo">Junio 2026</span>
+                            <button class="nav-flecha" onclick="avanzarMes(1)">►</button>
+                        </div>
                         <div class="calendario-container" id="calendario-mensual"></div>
                         <div class="acciones-clasificadas" id="clasificadas-mensual"></div>
                     </div>
