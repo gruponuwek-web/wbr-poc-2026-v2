@@ -300,19 +300,31 @@ function cargarAccionesWBR(mes, vendedorId) {
                     </tr>
                 </thead>
                 <tbody>
-                    ${filtradas.map(a => `
-                        <tr>
-                            <td>${a.tipo}</td>
-                            <td>${a.descripcion}</td>
-                            <td>${a.fecha_vencimiento || a.fecha}</td>
-                            <td>${a.responsable}</td>
-                        </tr>
-                    `).join('')}
+                    ${filtradas.map(a => {
+                        const fecha = a.fecha_vencimiento || a.fecha;
+                        const fechaFormato = formatearFecha(fecha);
+                        return `
+                            <tr>
+                                <td>${a.tipo}</td>
+                                <td>${a.descripcion}</td>
+                                <td>${fechaFormato}</td>
+                                <td>${a.responsable}</td>
+                            </tr>
+                        `;
+                    }).join('')}
                 </tbody>
             </table>
         `;
         document.getElementById('paso3-' + vendedorId).innerHTML = html;
     });
+}
+
+function formatearFecha(fechaISO) {
+    if (!fechaISO) return '';
+    const fecha = new Date(fechaISO);
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    return `${dia}/${mes}`;
 }
 
 function abrirModalAccion(vendedorId, vendedorNombre) {
