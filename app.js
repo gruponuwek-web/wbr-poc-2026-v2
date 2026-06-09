@@ -1,5 +1,9 @@
 let usuarioActual = 'Coordinador';
 let vendedoresData = [];
+let vendedorModalId = '';
+let vendedorModalNombre = '';
+let mesActual = 'Junio';
+let semanaActual = '24';
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -186,12 +190,13 @@ function mostrarTab(tabName) {
 }
 
 function crearNuevaWBR() {
+    mesActual = document.getElementById('mes-display').textContent;
+    semanaActual = document.getElementById('semana-display').textContent;
+    
     document.getElementById('vista-pre-sesion').style.display = 'none';
     document.getElementById('vista-post-sesion').style.display = 'block';
-    const mes = document.getElementById('mes-display').textContent;
-    const semana = document.getElementById('semana-display').textContent;
-    document.getElementById('titulo-sesion').textContent = `WBR - ${mes} Semana ${semana}`;
-    cargarVendedoresWBR(mes, semana);
+    document.getElementById('titulo-sesion').textContent = `WBR - ${mesActual} Semana ${semanaActual}`;
+    cargarVendedoresWBR(mesActual, semanaActual);
 }
 
 function cargarVendedoresWBR(mes, semana) {
@@ -332,7 +337,49 @@ function cargarAccionesWBR(mes, vendedorId) {
 }
 
 function abrirModalAccion(vendedorId, vendedorNombre) {
-    console.log('Modal Acciones:', vendedorNombre);
+    vendedorModalId = vendedorId;
+    vendedorModalNombre = vendedorNombre;
+    document.getElementById('vendedorModalNombre').textContent = vendedorNombre;
+    document.getElementById('modalAccion').style.display = 'flex';
+    
+    // Limpiar campos
+    document.getElementById('accion_tipo').value = '';
+    document.getElementById('accion_descripcion').value = '';
+    document.getElementById('accion_vencimiento').value = '';
+    document.getElementById('accion_responsable').value = '';
+}
+
+function cerrarModalAccion() {
+    document.getElementById('modalAccion').style.display = 'none';
+}
+
+function guardarAccion() {
+    const tipo = document.getElementById('accion_tipo').value;
+    const descripcion = document.getElementById('accion_descripcion').value;
+    const vencimiento = document.getElementById('accion_vencimiento').value;
+    const responsable = document.getElementById('accion_responsable').value;
+    
+    if (!tipo || !descripcion || !vencimiento || !responsable) {
+        alert('Completa todos los campos');
+        return;
+    }
+    
+    llamarAppScript('agregarAccion', {
+        mes: mesActual,
+        semana: semanaActual,
+        tipo: tipo,
+        vendedor: vendedorModalNombre,
+        descripcion: descripcion,
+        responsable: responsable,
+        fecha: vencimiento,
+        usuario: usuarioActual
+    }).then(response => {
+        if (response.exito) {
+            cerrarModalAccion();
+            cargarAccionesWBR(mesActual, vendedorModalId);
+            alert('Acción guardada ✅');
+        }
+    });
 }
 
 function guardarVendedorWBR(vendedorId, vendedorNombre, mes, semana) {
