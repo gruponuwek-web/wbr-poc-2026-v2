@@ -44,15 +44,18 @@ function cargarDatos() {
 // =======================================
 
 async function llamarAppScript(action, params = {}) {
-    const body = new URLSearchParams({
+    // Construir URL con parámetros GET
+    const urlParams = new URLSearchParams({
         action: action,
         ...params
     });
-
+    
+    const url = APPS_SCRIPT_URL + '?' + urlParams.toString();
+    
     try {
-        const response = await fetch(APPS_SCRIPT_URL, {
-            method: 'POST',
-            body: body
+        const response = await fetch(url, {
+            method: 'GET',
+            mode: 'cors'
         });
         const data = await response.json();
         return data;
@@ -302,15 +305,15 @@ function generarAcordeones() {
     const mesIndex = meses.indexOf(mesActivo);
     const mesCompleto = MESES_COMPLETOS[mesIndex] || 'Junio';
     
+    // Obtener número de semanas del mes PRIMERO
+    const semanasDelMes = SEMANAS_POR_MES[mesCompleto] || 4;
+    let sesionesGeneradas = 0;
+    
     // Crear grid para las sesiones
     const grid = document.createElement('div');
     grid.style.display = 'grid';
     grid.style.gridTemplateColumns = 'repeat(' + semanasDelMes + ', 1fr)';
     grid.style.gap = '20px';
-    
-    // Obtener número de semanas del mes
-    const semanasDelMes = SEMANAS_POR_MES[mesCompleto] || 4;
-    let sesionesGeneradas = 0;
     
     // Generar una sesión por cada semana del mes
     for (let semana = 1; semana <= semanasDelMes; semana++) {
