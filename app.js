@@ -747,9 +747,46 @@ function renderizarAccionesClasificadas(acciones, vista) {
     const mañana = new Date(hoy);
     mañana.setDate(hoy.getDate() + 1);
     
-    const retrasadas = acciones.filter(a => new Date(a.fecha) < hoy);
-    const hoyAcciones = acciones.filter(a => new Date(a.fecha).getTime() === hoy.getTime());
-    const mañanaAcciones = acciones.filter(a => new Date(a.fecha).getTime() === mañana.getTime());
+    // Función para parsear fecha DD/MM → Date object
+    function parsearFecha(fechaStr) {
+        if (!fechaStr) return null;
+        
+        // Si viene en formato "08/06" o "8/6"
+        const partes = String(fechaStr).split('/');
+        if (partes.length === 2) {
+            const dia = parseInt(partes[0]);
+            const mes = parseInt(partes[1]);
+            const año = new Date().getFullYear(); // Asume año actual
+            
+            const fecha = new Date(año, mes - 1, dia); // mes-1 porque JS es 0-indexed
+            fecha.setHours(0, 0, 0, 0);
+            return fecha;
+        }
+        
+        return null;
+    }
+    
+    // Clasificar acciones
+    const retrasadas = [];
+    const hoyAcciones = [];
+    const mañanaAcciones = [];
+    const futuras = [];
+    
+    acciones.forEach(a => {
+        const fechaAccion = parsearFecha(a.fecha);
+        
+        if (!fechaAccion) return; // Si no se pudo parsear, ignorar
+        
+        if (fechaAccion < hoy) {
+            retrasadas.push(a);
+        } else if (fechaAccion.getTime() === hoy.getTime()) {
+            hoyAcciones.push(a);
+        } else if (fechaAccion.getTime() === mañana.getTime()) {
+            mañanaAcciones.push(a);
+        } else {
+            futuras.push(a);
+        }
+    });
     
     let html = '<div class="clasificada-grupo">';
     
@@ -761,7 +798,7 @@ function renderizarAccionesClasificadas(acciones, vista) {
             html += `<tr onclick="abrirModalCambiarEstado('${a.id}', '${a.tipo}', '${a.descripcion}', '${a.fecha}', '${a.responsable}', '${a.estado}')">
                         <td>${a.tipo}</td>
                         <td>${a.descripcion.substring(0, 15)}</td>
-                        <td>${formatearFecha(a.fecha)}</td>
+                        <td>${a.fecha}</td>
                         <td>${a.responsable}</td>
                         <td>${a.estado}</td>
                      </tr>`;
@@ -777,7 +814,7 @@ function renderizarAccionesClasificadas(acciones, vista) {
             html += `<tr onclick="abrirModalCambiarEstado('${a.id}', '${a.tipo}', '${a.descripcion}', '${a.fecha}', '${a.responsable}', '${a.estado}')">
                         <td>${a.tipo}</td>
                         <td>${a.descripcion.substring(0, 15)}</td>
-                        <td>${formatearFecha(a.fecha)}</td>
+                        <td>${a.fecha}</td>
                         <td>${a.responsable}</td>
                         <td>${a.estado}</td>
                      </tr>`;
@@ -793,7 +830,7 @@ function renderizarAccionesClasificadas(acciones, vista) {
             html += `<tr onclick="abrirModalCambiarEstado('${a.id}', '${a.tipo}', '${a.descripcion}', '${a.fecha}', '${a.responsable}', '${a.estado}')">
                         <td>${a.tipo}</td>
                         <td>${a.descripcion.substring(0, 15)}</td>
-                        <td>${formatearFecha(a.fecha)}</td>
+                        <td>${a.fecha}</td>
                         <td>${a.responsable}</td>
                         <td>${a.estado}</td>
                      </tr>`;
