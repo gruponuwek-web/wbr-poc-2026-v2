@@ -79,6 +79,7 @@ function showSection(sectionId) {
     
     if (sectionId === 'testacciones') {
         cargarVendedoresParaTestAcciones();
+        cargarAccionesTest();
     }
     
     if (sectionId === 'testdesc') {
@@ -836,6 +837,113 @@ function testAccionGuardar() {
             document.getElementById('testa_responsable').value = '';
             document.getElementById('testa_fecha').value = '';
         } else {
+            mostrarMensaje('testaMsg', '❌ Error: ' + response.mensaje, 'error');
+        }
+    }).catch(err => {
+        console.error('❌ Error:', err);
+        mostrarMensaje('testaMsg', '❌ Fallo: ' + err, 'error');
+    });
+}
+
+// =======================================
+// TEST ACTUALIZAR ACCIÓN
+// =======================================
+
+function testAccActualizar() {
+    const id = document.getElementById('testacc_id').value.trim();
+    const estado = document.getElementById('testacc_estado').value;
+    
+    if (!id) {
+        mostrarMensaje('testaccMsg', '❌ Ingresa un ID de acción', 'error');
+        return;
+    }
+    
+    console.log('🔄 TEST ACCIÓN: Actualizando', id, '→', estado);
+    
+    llamarAppScript('actualizarEstadoAccion', {
+        idAccion: id,
+        estado: estado
+    }).then(response => {
+        console.log('📤 Respuesta:', response);
+        
+        if (response.exito) {
+            mostrarMensaje('testaccMsg', '✅ ACTUALIZADO en ACCIONES. Verifica Sheets columna Estado', 'success');
+        } else {
+            mostrarMensaje('testaccMsg', '❌ Error: ' + response.mensaje, 'error');
+        }
+    }).catch(err => {
+        console.error('❌ Error:', err);
+        mostrarMensaje('testaccMsg', '❌ Fallo: ' + err, 'error');
+    });
+}
+
+// =======================================
+// CARGAR Y ACTUALIZAR ACCIONES EN TEST
+// =======================================
+
+function cargarAccionesTest() {
+    const mes = document.getElementById('listacc_mes').value;
+    
+    console.log('🔵 cargarAccionesTest: mes=' + mes);
+    
+    llamarAppScript('obtenerAcciones', { mes }).then(acciones => {
+        console.log('📊 Acciones recibidas:', acciones);
+        
+        if (!acciones || acciones.length === 0) {
+            document.getElementById('listaAccionesTest').innerHTML = '<p style="color: #999;">Sin acciones para este mes</p>';
+            return;
+        }
+        
+        const html = acciones.map(a => `
+            <div style="background: white; padding: 15px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                    <div>
+                        <strong>${a.descripcion}</strong>
+                        <small style="display: block; color: #666; margin-top: 3px;">
+                            ${a.tipo} • ${a.vendedor} • Resp: ${a.responsable}
+                        </small>
+                    </div>
+                    <div style="text-align: right; font-size: 12px; color: #999;">
+                        ID: ${a.id}<br>
+                        Vence: ${a.fecha_vencimiento}
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <select id="estado_${a.id}" style="padding: 6px; border: 1px solid #bbb; border-radius: 3px; font-size: 13px;">
+                        <option value="Pendiente" ${a.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                        <option value="En Progreso" ${a.estado === 'En Progreso' ? 'selected' : ''}>En Progreso</option>
+                        <option value="Completado" ${a.estado === 'Completado' ? 'selected' : ''}>Completado</option>
+                    </select>
+                    <button class="btn-primary" onclick="actualizarAccionTest('${a.id}')" style="padding: 6px 15px; font-size: 13px;">Actualizar</button>
+                </div>
+            </div>
+        `).join('');
+        
+        document.getElementById('listaAccionesTest').innerHTML = html;
+        console.log('✅ Acciones cargadas');
+    }).catch(err => {
+        console.error('❌ Error:', err);
+        document.getElementById('listaAccionesTest').innerHTML = '<p style="color: red;">Error al cargar</p>';
+    });
+}
+
+function actualizarAccionTest(idAccion) {
+    const selectId = 'estado_' + idAccion;
+    const nuevoEstado = document.getElementById(selectId).value;
+    
+    console.log('🔄 Actualizando acción', idAccion, '→', nuevoEstado);
+    
+    llamarAppScript('actualizarEstadoAccion', {
+        idAccion: idAccion,
+        estado: nuevoEstado
+    }).then(response => {
+        console.log('📤 Respuesta:', response);
+        
+        if (response.exito) {
+            console.log('✅ Acción actualizada');
+            mostrarMensaje('testaMsg', '✅ Acción actualizada', 'success');
+        } else {
+            console.error('❌ Error:', response.mensaje);
             mostrarMensaje('testaMsg', '❌ Error: ' + response.mensaje, 'error');
         }
     }).catch(err => {
