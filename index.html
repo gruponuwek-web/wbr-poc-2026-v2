@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WBR Sistema v3 - Gestión Comercial</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- NAVBAR -->
+        <div class="navbar">
+            <h1>🎖️ WBR Sistema v3 - Gestión Comercial</h1>
+            <div class="user-info">
+                <span id="userDisplay">Coordinador</span>
+                <span id="dateTime"></span>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <!-- MENÚ -->
+            <div class="menu">
+                <button onclick="showSection('dashboard')" class="menu-btn active" id="btnDashboard">📊 Dashboard</button>
+                <button onclick="showSection('vendedores')" class="menu-btn" id="btnVendedores">👥 Vendedores</button>
+                <button onclick="showSection('compromisos')" class="menu-btn" id="btnCompromisos">📝 Compromisos</button>
+                <button onclick="showSection('wbr')" class="menu-btn" id="btnWBR">📅 Weekly Business Review</button>
+                <button onclick="showSection('acciones')" class="menu-btn" id="btnAcciones">⚡ Acciones de Seguimiento</button>
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid #555;">
+                <button onclick="showSection('test-estados')" class="menu-btn" id="btnTest">✅ Test - Estados</button>
+            </div>
+
+            <!-- CONTENIDO -->
+            <div class="content">
+                <!-- DASHBOARD -->
+                <section id="dashboard" class="section active">
+                    <h2>📊 Dashboard</h2>
+                    <div id="dashboardContent">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                </section>
+
+                <!-- VENDEDORES -->
+                <section id="vendedores" class="section">
+                    <h2>👥 Gestión de Vendedores</h2>
+                    <div class="form-group">
+                        <label>Agregar Vendedor:</label>
+                        <input type="text" id="nuevoVendedor" placeholder="Nombre del vendedor">
+                    </div>
+                    <button class="btn-primary" onclick="agregarVendedor()">Agregar</button>
+                    <div id="vendedorMsg"></div>
+                    <div style="margin-top: 20px;">
+                        <h3>Vendedores Activos</h3>
+                        <div id="vendedoresList">
+                            <div class="loading"><div class="spinner"></div></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- COMPROMISOS -->
+                <section id="compromisos" class="section">
+                    <h2>📝 Agregar Compromiso</h2>
+                    <div class="form-group">
+                        <label>Mes:</label>
+                        <select id="comp_mes"><option value="Junio" selected>Junio</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Vendedor:</label>
+                        <select id="comp_vendedor"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Cliente:</label>
+                        <input type="text" id="comp_cliente" placeholder="Nombre o código de cliente">
+                    </div>
+                    <div class="form-group">
+                        <label>Clasificación:</label>
+                        <select id="comp_clasificacion">
+                            <option value="Prospección">Prospección</option>
+                            <option value="Crecimiento">Crecimiento</option>
+                            <option value="Recuperado">Recuperado</option>
+                        </select>
+                    </div>
+                    <button class="btn-success" onclick="agregarCompromiso()">Guardar Compromiso</button>
+                    <div id="compromisosMsg"></div>
+                    <table>
+                        <thead>
+                            <tr><th>ID</th><th>Mes</th><th>Vendedor</th><th>Cliente</th><th>Clasificación</th><th>Estado</th></tr>
+                        </thead>
+                        <tbody id="compromisosTableBody">
+                            <tr><td colspan="6" class="loading"><div class="spinner"></div></td></tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- WBR -->
+                <section id="wbr" class="section">
+                    <h2>📅 Weekly Business Review</h2>
+                    <div id="wbrMsg"></div>
+                    <div id="wbrAccordionContainer" class="wbr-accordion"></div>
+                </section>
+
+                <!-- ACCIONES -->
+                <section id="acciones" class="section">
+                    <h2>⚡ Acciones de Seguimiento</h2>
+                    <div class="form-group">
+                        <label>Mes:</label>
+                        <select id="accion_mes" onchange="cargarAcciones()"><option value="Junio" selected>Junio</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Semana:</label>
+                        <input type="number" id="accion_semana" min="1" max="4" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo:</label>
+                        <select id="accion_tipo"><option value="Tarea">Tarea</option><option value="Llamada">Llamada</option><option value="Reunión">Reunión</option><option value="Email">Email</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Vendedor:</label>
+                        <select id="accion_vendedor"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Descripción:</label>
+                        <textarea id="accion_descripcion" placeholder="Detalle de la acción..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Responsable:</label>
+                        <input type="text" id="accion_responsable" placeholder="Nombre del responsable">
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha de Vencimiento:</label>
+                        <input type="date" id="accion_fecha">
+                    </div>
+                    <button class="btn-success" id="btnAgregarAccion" onclick="agregarAccion()">Crear Acción</button>
+                    <div id="accionMsg"></div>
+                    <table>
+                        <thead><tr><th>Tipo</th><th>Vendedor</th><th>Descripción</th><th>Responsable</th><th>Vencimiento</th><th>Estado</th></tr></thead>
+                        <tbody id="accionTableBody"><tr><td colspan="6" class="loading"><div class="spinner"></div></td></tr></tbody>
+                    </table>
+                </section>
+
+                <!-- TEST - ESTADOS -->
+                <section id="test-estados" class="section">
+                    <h2>✅ Test - Actualizar Estados de Compromisos</h2>
+                    <p>Aquí puedes cambiar el estado de los compromisos de Pendiente a Completado/No Completado</p>
+                    <div id="testContent">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PARA LLENAR WBR -->
+    <div id="wbrFormModal">
+        <div>
+            <h2 id="wbrFormTitle">WBR</h2>
+            <div id="wbrFormContent"></div>
+            <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn-danger" onclick="cerrarWBRForm()">Cancelar</button>
+                <button class="btn-success" id="btnGuardarWBR" onclick="guardarWBRCompleta()">Guardar y Cerrar WBR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- IMPORTAR APP.JS -->
+    <script src="api-handler.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
