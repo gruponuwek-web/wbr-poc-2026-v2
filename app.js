@@ -226,27 +226,55 @@ function renderizarSesiones(sesiones) {
     const activas = sesiones.filter(s => s.estado !== 'Cerrada');
     const cerradas = sesiones.filter(s => s.estado === 'Cerrada');
     
-    // SECCIÓN 1: Sesiones Activas
+    // SECCIÓN 1: Sesión Activa (la más reciente, abierta por defecto)
     if (activas.length > 0) {
-        const seccionActivas = document.createElement('div');
-        seccionActivas.style.marginBottom = '20px';
+        // Tomar la última sesión activa (la más reciente)
+        const sesionActual = activas[activas.length - 1];
         
-        const headerActivas = document.createElement('div');
-        headerActivas.innerHTML = `<h3 style="color: #2c3e50; margin-bottom: 15px;">📌 Sesiones Activas (${activas.length})</h3>`;
-        seccionActivas.appendChild(headerActivas);
+        const seccionActiva = document.createElement('div');
+        seccionActiva.style.marginBottom = '30px';
+        seccionActiva.style.background = 'white';
+        seccionActiva.style.borderRadius = '5px';
+        seccionActiva.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+        seccionActiva.style.overflow = 'hidden';
         
-        const gridActivas = document.createElement('div');
-        gridActivas.style.display = 'flex';
-        gridActivas.style.flexDirection = 'column';
-        gridActivas.style.gap = '10px';
+        // Header de la sesión activa
+        const headerActiva = document.createElement('div');
+        headerActiva.style.background = '#2c3e50';
+        headerActiva.style.color = 'white';
+        headerActiva.style.padding = '15px 20px';
+        headerActiva.style.fontWeight = 'bold';
+        headerActiva.style.cursor = 'pointer';
+        headerActiva.style.display = 'flex';
+        headerActiva.style.justifyContent = 'space-between';
+        headerActiva.style.alignItems = 'center';
+        headerActiva.innerHTML = `
+            <span>📌 Semana ${sesionActual.semana} [${sesionActual.estado}]</span>
+            <span style="font-size: 12px;">▲</span>
+        `;
         
-        activas.forEach(sesion => {
-            const card = crearTarjetaSesion(sesion);
-            gridActivas.appendChild(card);
-        });
+        const contenidoActiva = document.createElement('div');
+        contenidoActiva.style.padding = '20px';
+        contenidoActiva.style.display = 'block'; // Abierto por defecto
         
-        seccionActivas.appendChild(gridActivas);
-        container.appendChild(seccionActivas);
+        // Aquí irán los acordeones de vendedoras
+        const acordeonesMes = document.createElement('div');
+        acordeonesMes.id = `acordeones-vendedoras-${sesionActual.semana}`;
+        contenidoActiva.appendChild(acordeonesMes);
+        
+        // Toggle para abrir/cerrar
+        headerActiva.onclick = () => {
+            const isOpen = contenidoActiva.style.display !== 'none';
+            contenidoActiva.style.display = isOpen ? 'none' : 'block';
+            headerActiva.querySelector('span:last-child').textContent = isOpen ? '▼' : '▲';
+        };
+        
+        seccionActiva.appendChild(headerActiva);
+        seccionActiva.appendChild(contenidoActiva);
+        container.appendChild(seccionActiva);
+        
+        // Cargar acordeones de vendedoras para esta sesión
+        cargarAcordeonesPorSemana(sesionActual.mes, sesionActual.semana, acordeonesMes);
     } else {
         const empty = document.createElement('p');
         empty.textContent = 'No hay sesiones activas';
@@ -258,14 +286,15 @@ function renderizarSesiones(sesiones) {
     // SECCIÓN 2: Sesiones Anteriores (acordeón)
     if (cerradas.length > 0) {
         const seccionAnterior = document.createElement('div');
-        seccionAnterior.style.marginTop = '30px';
-        seccionAnterior.style.borderTop = '1px solid #ddd';
-        seccionAnterior.style.paddingTop = '20px';
+        seccionAnterior.style.marginTop = '20px';
+        seccionAnterior.style.background = 'white';
+        seccionAnterior.style.borderRadius = '5px';
+        seccionAnterior.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+        seccionAnterior.style.overflow = 'hidden';
         
         const headerAnterior = document.createElement('div');
         headerAnterior.style.background = '#ecf0f1';
-        headerAnterior.style.padding = '15px';
-        headerAnterior.style.borderRadius = '5px';
+        headerAnterior.style.padding = '15px 20px';
         headerAnterior.style.cursor = 'pointer';
         headerAnterior.style.fontWeight = 'bold';
         headerAnterior.style.display = 'flex';
@@ -278,9 +307,8 @@ function renderizarSesiones(sesiones) {
         `;
         
         const contenidoAnterior = document.createElement('div');
-        contenidoAnterior.style.display = 'none';
-        contenidoAnterior.style.marginTop = '10px';
-        contenidoAnterior.style.paddingTop = '10px';
+        contenidoAnterior.style.display = 'none'; // Cerrado por defecto
+        contenidoAnterior.style.padding = '20px';
         
         const gridAnterior = document.createElement('div');
         gridAnterior.style.display = 'flex';
@@ -288,7 +316,33 @@ function renderizarSesiones(sesiones) {
         gridAnterior.style.gap = '10px';
         
         cerradas.forEach(sesion => {
-            const card = crearTarjetaSesion(sesion, true);
+            const card = document.createElement('div');
+            card.style.background = '#f9f9f9';
+            card.style.padding = '12px';
+            card.style.borderRadius = '4px';
+            card.style.borderLeft = '4px solid #95a5a6';
+            card.style.display = 'flex';
+            card.style.justifyContent = 'space-between';
+            card.style.alignItems = 'center';
+            
+            const info = document.createElement('div');
+            info.innerHTML = `
+                <h4 style="color: #2c3e50; margin: 0; font-size: 13px;">Semana ${sesion.semana}</h4>
+                <small style="color: #999;">Estado: Cerrada</small>
+            `;
+            
+            const btnPDF = document.createElement('button');
+            btnPDF.textContent = 'PDF';
+            btnPDF.style.padding = '6px 12px';
+            btnPDF.style.background = '#3498db';
+            btnPDF.style.color = 'white';
+            btnPDF.style.border = 'none';
+            btnPDF.style.borderRadius = '4px';
+            btnPDF.style.cursor = 'pointer';
+            btnPDF.style.fontSize = '11px';
+            
+            card.appendChild(info);
+            card.appendChild(btnPDF);
             gridAnterior.appendChild(card);
         });
         
@@ -306,57 +360,147 @@ function renderizarSesiones(sesiones) {
     }
 }
 
-function crearTarjetaSesion(sesion, esCerrada = false) {
-    const card = document.createElement('div');
-    card.style.background = 'white';
-    card.style.padding = '15px';
-    card.style.borderRadius = '5px';
-    card.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
-    card.style.borderLeft = '4px solid ' + (sesion.estado === 'Cerrada' ? '#95a5a6' : sesion.estado === 'Abierta' ? '#27ae60' : '#f39c12');
-    card.style.display = 'flex';
-    card.style.justifyContent = 'space-between';
-    card.style.alignItems = 'center';
+async function cargarAcordeonesPorSemana(mes, semana, container) {
+    // Cargar compromisos del mes
+    const resultCompromisos = await llamarAppScript('obtenerCompromisos', { mes: mes });
+    const compromisos = resultCompromisos.exito ? resultCompromisos.data : [];
     
-    const info = document.createElement('div');
-    info.innerHTML = `
-        <h4 style="color: #2c3e50; margin: 0 0 5px 0; font-size: 14px;">Semana ${sesion.semana}</h4>
-        <small style="color: #999;">Estado: <strong>${sesion.estado}</strong></small>
-    `;
+    // Filtrar solo compromisos de esta semana
+    const compromisosDelaMes = compromisos.filter(c => c.semana === semana || !c.semana);
     
-    const botones = document.createElement('div');
-    botones.style.display = 'flex';
-    botones.style.gap = '8px';
+    console.log(`Cargando acordeones para ${mes} - Semana ${semana}:`, compromisosDelaMes);
     
-    if (!esCerrada) {
-        const btnAbrir = document.createElement('button');
-        btnAbrir.textContent = 'Abrir';
-        btnAbrir.style.padding = '8px 15px';
-        btnAbrir.style.background = '#2c3e50';
-        btnAbrir.style.color = 'white';
-        btnAbrir.style.border = 'none';
-        btnAbrir.style.borderRadius = '4px';
-        btnAbrir.style.cursor = 'pointer';
-        btnAbrir.style.fontSize = '12px';
-        btnAbrir.onclick = () => abrirSesionWBR('Junio', sesion.semana);
-        botones.appendChild(btnAbrir);
-    }
+    // Generar acordeones de vendedores
+    const vendedoresActivos = vendedoresData.filter(v => v.estado === 'Activo');
     
-    if (sesion.estado === 'Cerrada') {
-        const btnPDF = document.createElement('button');
-        btnPDF.textContent = 'PDF';
-        btnPDF.style.padding = '8px 15px';
-        btnPDF.style.background = '#3498db';
-        btnPDF.style.color = 'white';
-        btnPDF.style.border = 'none';
-        btnPDF.style.borderRadius = '4px';
-        btnPDF.style.cursor = 'pointer';
-        btnPDF.style.fontSize = '12px';
-        botones.appendChild(btnPDF);
-    }
-    
-    card.appendChild(info);
-    card.appendChild(botones);
-    return card;
+    vendedoresActivos.forEach(vendedor => {
+        // Filtrar compromisos de este vendedor
+        const compromisosDelVendedor = compromisosDelaMes.filter(c => c.vendedor === vendedor.nombre);
+        
+        const item = document.createElement('div');
+        item.style.background = '#f9f9f9';
+        item.style.borderLeft = '4px solid #2c3e50';
+        item.style.borderRadius = '5px';
+        item.style.overflow = 'hidden';
+        item.style.marginBottom = '10px';
+        
+        const header = document.createElement('div');
+        header.style.background = '#2c3e50';
+        header.style.color = 'white';
+        header.style.padding = '15px';
+        header.style.cursor = 'pointer';
+        header.style.fontWeight = 'bold';
+        header.style.userSelect = 'none';
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'center';
+        
+        const headerLeft = document.createElement('span');
+        headerLeft.textContent = `👤 ${vendedor.nombre}`;
+        
+        const headerRight = document.createElement('span');
+        headerRight.style.fontSize = '12px';
+        headerRight.style.fontWeight = 'normal';
+        const cumplidos = compromisosDelVendedor.filter(c => c.estado === 'Completado').length;
+        const total = compromisosDelVendedor.length;
+        headerRight.textContent = `(${cumplidos}/${total} compromisos) ▼`;
+        
+        header.appendChild(headerLeft);
+        header.appendChild(headerRight);
+        
+        const content = document.createElement('div');
+        content.className = 'wbr-content';
+        content.style.display = 'none';
+        content.style.padding = '15px';
+        content.style.background = 'white';
+        
+        // PASO 1: Compromisos
+        const paso1 = document.createElement('div');
+        paso1.style.marginBottom = '15px';
+        paso1.innerHTML = '<h4 style="color: #2c3e50; margin-bottom: 10px;">1️⃣ Compromisos</h4>';
+        
+        if (compromisosDelVendedor.length === 0) {
+            paso1.innerHTML += '<p style="color: #999; font-size: 12px;">No hay compromisos para este mes</p>';
+        } else {
+            const listaPaso1 = document.createElement('div');
+            compromisosDelVendedor.forEach(comp => {
+                const compItem = document.createElement('div');
+                compItem.style.background = '#f0f0f0';
+                compItem.style.padding = '10px';
+                compItem.style.borderRadius = '5px';
+                compItem.style.marginBottom = '8px';
+                compItem.style.display = 'flex';
+                compItem.style.justifyContent = 'space-between';
+                compItem.style.alignItems = 'center';
+                compItem.style.fontSize = '13px';
+                
+                const compInfo = document.createElement('div');
+                compInfo.style.flex = '1';
+                compInfo.innerHTML = `
+                    <strong style="color: #2c3e50;">${comp.cliente}</strong><br/>
+                    <small style="color: #666;">${comp.clasificacion}</small>
+                `;
+                
+                const compEstado = document.createElement('div');
+                compEstado.style.display = 'flex';
+                compEstado.style.gap = '5px';
+                
+                // Botón ✓ (Completado)
+                const btnCompletado = document.createElement('button');
+                btnCompletado.textContent = '✓';
+                btnCompletado.style.width = '30px';
+                btnCompletado.style.height = '30px';
+                btnCompletado.style.border = '2px solid #27ae60';
+                btnCompletado.style.borderRadius = '50%';
+                btnCompletado.style.cursor = 'pointer';
+                btnCompletado.style.background = comp.estado === 'Completado' ? '#27ae60' : 'white';
+                btnCompletado.style.color = comp.estado === 'Completado' ? 'white' : '#27ae60';
+                btnCompletado.style.fontWeight = 'bold';
+                btnCompletado.onclick = () => cambiarEstadoCompromiso(comp.id, 'Completado', btnCompletado);
+                
+                // Botón ✗ (No Completado)
+                const btnNoCompletado = document.createElement('button');
+                btnNoCompletado.textContent = '✗';
+                btnNoCompletado.style.width = '30px';
+                btnNoCompletado.style.height = '30px';
+                btnNoCompletado.style.border = '2px solid #e74c3c';
+                btnNoCompletado.style.borderRadius = '50%';
+                btnNoCompletado.style.cursor = 'pointer';
+                btnNoCompletado.style.background = comp.estado === 'No Completado' ? '#e74c3c' : 'white';
+                btnNoCompletado.style.color = comp.estado === 'No Completado' ? 'white' : '#e74c3c';
+                btnNoCompletado.style.fontWeight = 'bold';
+                btnNoCompletado.onclick = () => cambiarEstadoCompromiso(comp.id, 'No Completado', btnNoCompletado);
+                
+                compEstado.appendChild(btnCompletado);
+                compEstado.appendChild(btnNoCompletado);
+                
+                compItem.appendChild(compInfo);
+                compItem.appendChild(compEstado);
+                listaPaso1.appendChild(compItem);
+            });
+            paso1.appendChild(listaPaso1);
+        }
+        
+        content.appendChild(paso1);
+        
+        // PASO 2 y 3 (placeholders por ahora)
+        const paso2 = document.createElement('div');
+        paso2.innerHTML = '<h4 style="color: #2c3e50; margin-top: 15px; margin-bottom: 10px;">2️⃣ Descubrimientos</h4><p style="color: #999; font-size: 12px;">[Por implementar]</p>';
+        content.appendChild(paso2);
+        
+        const paso3 = document.createElement('div');
+        paso3.innerHTML = '<h4 style="color: #2c3e50; margin-top: 15px; margin-bottom: 10px;">3️⃣ Acciones</h4><p style="color: #999; font-size: 12px;">[Por implementar]</p>';
+        content.appendChild(paso3);
+        
+        header.onclick = (e) => {
+            content.style.display = content.style.display === 'none' ? 'block' : 'none';
+            headerRight.textContent = content.style.display === 'none' ? `(${cumplidos}/${total} compromisos) ▼` : `(${cumplidos}/${total} compromisos) ▲`;
+        };
+        
+        item.appendChild(header);
+        item.appendChild(content);
+        container.appendChild(item);
+    });
 }
 
 function crearNuevaSesion() {
