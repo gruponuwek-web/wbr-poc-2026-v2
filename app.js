@@ -102,30 +102,23 @@ function loadDashboard() {
     
     // Llamar a AppScript para obtener compromisos del mes
     llamarAppScript('obtenerCompromisos', { mes: mesActual }).then(compromisos => {
-        // Mapeo de clasificaciones a nombres
-        const clasificacionNombres = {
-            'A': 'Prospección',
-            'B': 'Crecimiento',
-            'C': 'Recuperación'
-        };
-        
         // Contar totales
         const totalCompromisos = compromisos.length;
         const realizados = compromisos.filter(c => c.estado === 'Completado').length;
         const porcentajeTotalCompletados = totalCompromisos > 0 ? Math.round((realizados / totalCompromisos) * 100) : 0;
         
-        // Contar por clasificación
-        const clasificacionA = compromisos.filter(c => c.clasificacion === 'A');
-        const completadosA = clasificacionA.filter(c => c.estado === 'Completado').length;
-        const porcentajeA = clasificacionA.length > 0 ? Math.round((completadosA / clasificacionA.length) * 100) : 0;
+        // Contar por clasificación REAL: Prospección, Crecimiento, Recuperado
+        const clasificacionProspeccion = compromisos.filter(c => c.clasificacion === 'Prospección');
+        const completadosProspeccion = clasificacionProspeccion.filter(c => c.estado === 'Completado').length;
+        const porcentajeProspeccion = clasificacionProspeccion.length > 0 ? Math.round((completadosProspeccion / clasificacionProspeccion.length) * 100) : 0;
         
-        const clasificacionB = compromisos.filter(c => c.clasificacion === 'B');
-        const completadosB = clasificacionB.filter(c => c.estado === 'Completado').length;
-        const porcentajeB = clasificacionB.length > 0 ? Math.round((completadosB / clasificacionB.length) * 100) : 0;
+        const clasificacionCrecimiento = compromisos.filter(c => c.clasificacion === 'Crecimiento');
+        const completadosCrecimiento = clasificacionCrecimiento.filter(c => c.estado === 'Completado').length;
+        const porcentajeCrecimiento = clasificacionCrecimiento.length > 0 ? Math.round((completadosCrecimiento / clasificacionCrecimiento.length) * 100) : 0;
         
-        const clasificacionC = compromisos.filter(c => c.clasificacion === 'C');
-        const completadosC = clasificacionC.filter(c => c.estado === 'Completado').length;
-        const porcentajeC = clasificacionC.length > 0 ? Math.round((completadosC / clasificacionC.length) * 100) : 0;
+        const clasificacionRecuperado = compromisos.filter(c => c.clasificacion === 'Recuperado');
+        const completadosRecuperado = clasificacionRecuperado.filter(c => c.estado === 'Completado').length;
+        const porcentajeRecuperado = clasificacionRecuperado.length > 0 ? Math.round((completadosRecuperado / clasificacionRecuperado.length) * 100) : 0;
         
         // Generar HTML de métricas
         const html = `
@@ -138,23 +131,23 @@ function loadDashboard() {
             
             <div class="metric-card clasificacion-a">
                 <h3>Prospección</h3>
-                <div class="metric-number">${completadosA}/${clasificacionA.length}</div>
+                <div class="metric-number">${completadosProspeccion}/${clasificacionProspeccion.length}</div>
                 <div class="metric-subtitle">Completados / Totales</div>
-                <div class="metric-percentage">${porcentajeA}%</div>
+                <div class="metric-percentage">${porcentajeProspeccion}%</div>
             </div>
             
             <div class="metric-card clasificacion-b">
                 <h3>Crecimiento</h3>
-                <div class="metric-number">${completadosB}/${clasificacionB.length}</div>
+                <div class="metric-number">${completadosCrecimiento}/${clasificacionCrecimiento.length}</div>
                 <div class="metric-subtitle">Completados / Totales</div>
-                <div class="metric-percentage">${porcentajeB}%</div>
+                <div class="metric-percentage">${porcentajeCrecimiento}%</div>
             </div>
             
             <div class="metric-card clasificacion-c">
-                <h3>Recuperación</h3>
-                <div class="metric-number">${completadosC}/${clasificacionC.length}</div>
+                <h3>Recuperado</h3>
+                <div class="metric-number">${completadosRecuperado}/${clasificacionRecuperado.length}</div>
                 <div class="metric-subtitle">Completados / Totales</div>
-                <div class="metric-percentage">${porcentajeC}%</div>
+                <div class="metric-percentage">${porcentajeRecuperado}%</div>
             </div>
         `;
         
