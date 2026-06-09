@@ -23,6 +23,7 @@
                 <button onclick="showSection('dashboard')" class="menu-btn active">📊 Dashboard</button>
                 <button onclick="showSection('compromisos')" class="menu-btn">📝 Compromisos</button>
                 <button onclick="showSection('wbr')" class="menu-btn">📅 WBR</button>
+                <button onclick="showSection('acciones')" class="menu-btn">📋 Acciones</button>
             </div>
 
             <!-- CONTENIDO -->
@@ -137,11 +138,29 @@
                         <div id="wbr-historial-list"></div>
                     </div>
                 </section>
-            </div>
-        </div>
-    </div>
+                <!-- ACCIONES -->
+                <section id="acciones" class="section">
+                    <h2>📋 Gestor de Acciones</h2>
+                    
+                    <!-- TABS VISTAS -->
+                    <div class="acciones-tabs">
+                        <button class="acciones-tab active" onclick="mostrarVistaAcciones('semanal')">📅 Semanal</button>
+                        <button class="acciones-tab" onclick="mostrarVistaAcciones('mensual')">📆 Mensual</button>
+                    </div>
+                    
+                    <!-- VISTA SEMANAL (KANBAN) -->
+                    <div id="vista-semanal" class="acciones-vista active">
+                        <div class="kanban-container" id="kanban-semanal"></div>
+                        <div class="acciones-clasificadas" id="clasificadas-semanal"></div>
+                    </div>
+                    
+                    <!-- VISTA MENSUAL -->
+                    <div id="vista-mensual" class="acciones-vista">
+                        <div class="calendario-container" id="calendario-mensual"></div>
+                        <div class="acciones-clasificadas" id="clasificadas-mensual"></div>
+                    </div>
+                </section>
 
-    <!-- MODAL AGREGAR ACCIÓN -->
     <div id="modalAccion" class="modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
