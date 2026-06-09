@@ -1,11 +1,13 @@
 // =======================================
-// WBR SISTEMA v3 - APP.JS (localStorage)
+// WBR SISTEMA v3 - APP.JS (Sheets)
 // =======================================
 
 let usuarioActual = 'Cargando...';
 let vendedoresData = [];
 let compromisosData = [];
 let wbrHistorico = {};
+
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxV8fXIxW7stjX3I4Ysjh20VtPquQZgE6Y3MzcnNpHQCP_e3ZMsT9jPrruHOGudztsW/exec';
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const SEMANAS_POR_MES = { 'Enero': 4, 'Febrero': 4, 'Marzo': 5, 'Abril': 4, 'Mayo': 5, 'Junio': 4, 'Julio': 5, 'Agosto': 4, 'Septiembre': 5, 'Octubre': 4, 'Noviembre': 5, 'Diciembre': 4 };
@@ -56,46 +58,36 @@ function inicializarDatos() {
 }
 
 // =======================================
-// FETCH (simulado con localStorage)
+// FETCH (conectado a Sheets vía Apps Script)
 // =======================================
 
 async function llamarAppScript(action, params = {}) {
-    // Simular delay de red
-    await new Promise(r => setTimeout(r, 100));
+    // Construir URL con parámetros GET
+    const urlParams = new URLSearchParams({
+        action: action,
+        ...params
+    });
     
-    console.log(`📤 llamarAppScript: ${action}`, params);
+    const url = APPS_SCRIPT_URL + '?' + urlParams.toString();
+    
+    console.log(`📤 Llamando Apps Script: ${action}`, params);
     
     try {
-        switch(action) {
-            case 'obtenerVendedores':
-                return { exito: true, data: JSON.parse(localStorage.getItem('wbr_vendedores')) || [] };
-            
-            case 'obtenerCompromisos':
-                const compromisos = JSON.parse(localStorage.getItem('wbr_compromisos')) || [];
-                const filtrados = compromisos.filter(c => c.mes === params.mes);
-                return { exito: true, data: filtrados };
-            
-            case 'obtenerWBR':
-                const sesiones = JSON.parse(localStorage.getItem('wbr_sesiones')) || [];
-                const sesionesDelMes = sesiones.filter(s => s.mes === params.mes);
-                return { exito: true, data: sesionesDelMes };
-            
-            case 'actualizarEstadoCompromiso':
-                const allCompromisos = JSON.parse(localStorage.getItem('wbr_compromisos')) || [];
-                const compIndex = allCompromisos.findIndex(c => c.id === params.idCompromiso);
-                if (compIndex !== -1) {
-                    allCompromisos[compIndex].estado = params.completado === 'true' || params.completado === true ? 'Completado' : 'No Completado';
-                    localStorage.setItem('wbr_compromisos', JSON.stringify(allCompromisos));
-                    return { exito: true, mensaje: 'Estado actualizado' };
-                }
-                return { exito: false, mensaje: 'Compromiso no encontrado' };
-            
-            default:
-                return { exito: false, mensaje: 'Acción no reconocida' };
+        const response = await fetch(url, {
+            method: 'GET',
+            mode: 'cors'
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
+        const data = await response.json();
+        console.log('✅ Respuesta:', data);
+        return data;
     } catch(error) {
-        console.error('Error:', error);
-        return { exito: false, mensaje: 'Error: ' + error.message };
+        console.error('❌ Error en fetch:', error);
+        return { exito: false, mensaje: 'Error de conexión: ' + error.message };
     }
 }
 
