@@ -55,13 +55,24 @@ async function llamarAppScript(action, params = {}) {
     try {
         const response = await fetch(url, {
             method: 'GET',
-            mode: 'cors'
+            mode: 'no-cors'
         });
-        const data = await response.json();
-        return data;
+        
+        // Con no-cors, obtenemos opaque response
+        // Necesitamos leer como text primero
+        const text = await response.text();
+        console.log('Response text:', text);
+        
+        try {
+            const data = JSON.parse(text);
+            return data;
+        } catch (parseError) {
+            console.error('Error parsing JSON:', parseError, 'Text was:', text);
+            return { exito: false, mensaje: 'Error al parsear respuesta', data: text };
+        }
     } catch(error) {
-        console.error('Error:', error);
-        return { exito: false, mensaje: 'Error de conexión' };
+        console.error('Error en fetch:', error);
+        return { exito: false, mensaje: 'Error de conexión: ' + error.message };
     }
 }
 
