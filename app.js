@@ -465,11 +465,82 @@ function descargarPDF() {
 
 // ===== GESTOR DE ACCIONES =====
 
+// Variables globales para navegación
+let semanaActualAcciones = obtenerSemanaActual();
+let mesActualAcciones = obtenerMesActual();
+let diaFiltroAcciones = null; // Para filtrar por día específico en vista mensual
+
+function obtenerSemanaActual() {
+    const hoy = new Date();
+    const primerDia = new Date(hoy);
+    primerDia.setDate(hoy.getDate() - hoy.getDay() + 1);
+    return {
+        numero: Math.ceil((hoy.getDate() - hoy.getDay()) / 7),
+        inicio: primerDia,
+        fin: new Date(primerDia.getTime() + 6 * 24 * 60 * 60 * 1000)
+    };
+}
+
+function obtenerMesActual() {
+    const hoy = new Date();
+    return {
+        mes: hoy.getMonth(),
+        año: hoy.getFullYear()
+    };
+}
+
 function cargarAccionesGestor() {
     llamarAppScript('obtenerAcciones', { mes: 'Junio' }).then(acciones => {
         const accionesNoCompletadas = acciones.filter(a => a.estado !== 'COMPLETADO' && a.estado !== 'Completado');
         mostrarVistaAcciones('semanal', accionesNoCompletadas);
     });
+}
+
+function avanzarSemana(direccion) {
+    semanaActualAcciones.inicio.setDate(semanaActualAcciones.inicio.getDate() + (direccion * 7));
+    semanaActualAcciones.fin.setDate(semanaActualAcciones.fin.getDate() + (direccion * 7));
+    actualizarTituloSemana();
+    
+    llamarAppScript('obtenerAcciones', { mes: 'Junio' }).then(acciones => {
+        const accionesNoCompletadas = acciones.filter(a => a.estado !== 'COMPLETADO' && a.estado !== 'Completado');
+        renderizarVistaSemanal(accionesNoCompletadas);
+    });
+}
+
+function avanzarMes(direccion) {
+    mesActualAcciones.mes += direccion;
+    if (mesActualAcciones.mes > 11) {
+        mesActualAcciones.mes = 0;
+        mesActualAcciones.año += 1;
+    } else if (mesActualAcciones.mes < 0) {
+        mesActualAcciones.mes = 11;
+        mesActualAcciones.año -= 1;
+    }
+    diaFiltroAcciones = null;
+    actualizarTituloMes();
+    
+    llamarAppScript('obtenerAcciones', { mes: 'Junio' }).then(acciones => {
+        const accionesNoCompletadas = acciones.filter(a => a.estado !== 'COMPLETADO' && a.estado !== 'Completado');
+        renderizarVistaMensual(accionesNoCompletadas);
+    });
+}
+
+function actualizarTituloSemana() {
+    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const dia1 = semanaActualAcciones.inicio.getDate();
+    const mes1 = meses[semanaActualAcciones.inicio.getMonth()];
+    const dia2 = semanaActualAcciones.fin.getDate();
+    const mes2 = meses[semanaActualAcciones.fin.getMonth()];
+    const num = Math.ceil(semanaActualAcciones.inicio.getDate() / 7);
+    
+    let titulo = `Semana ${num} (${dia1}-${dia2} ${dia2 > dia1 ? mes1 : mes2})`;
+    document.getElementById('semana-titulo').textContent = titulo;
+}
+
+function actualizarTituloMes() {
+    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const titulo = `${meses[mesActualAcciones.mes]} ${mesActualAcciones.año}`;
+    document.getElementById('mes-titulo').textContent = titulo;
 }
 
 function mostrarVistaAcciones(vista, acciones = null) {
@@ -493,8 +564,10 @@ function renderizarVista(vista, acciones) {
     document.querySelector('.acciones-tab[data-vista="' + vista + '"]').classList.add('active');
     
     if (vista === 'semanal') {
+        actualizarTituloSemana();
         renderizarVistaSemanal(acciones);
     } else {
+        actualizarTituloMes();
         renderizarVistaMensual(acciones);
     }
 }
@@ -545,9 +618,8 @@ function renderizarVistaSemanal(acciones) {
 }
 
 function renderizarVistaMensual(acciones) {
-    const hoy = new Date();
-    const mes = hoy.getMonth();
-    const año = hoy.getFullYear();
+    const mes = mesActualAcciones.mes;
+    const año = mesActualAcciones.año;
     const primerDia = new Date(año, mes, 1);
     const ultimoDia = new Date(año, mes + 1, 0);
     
@@ -571,7 +643,7 @@ function renderizarVistaMensual(acciones) {
         });
         
         calendarioHTML += `
-            <div class="calendario-dia">
+            <div class="calendario-dia" onclick="filtrarAccionesPorDia(${dia})">
                 <div class="calendario-numero">${dia}</div>
                 <div class="calendario-count">${accionesDelDia.length > 0 ? '[' + accionesDelDia.length + ']' : ''}</div>
             </div>
@@ -581,6 +653,19 @@ function renderizarVistaMensual(acciones) {
     calendarioHTML += '</div>';
     document.getElementById('calendario-mensual').innerHTML = calendarioHTML;
     renderizarAccionesClasificadas(acciones, 'mensual');
+}
+
+function filtrarAccionesPorDia(dia) {
+    diaFiltroAcciones = dia;
+    
+    llamarAppScript('obtenerAcciones', { mes: 'Junio' }).then(acciones => {
+        const accionesNoCompletadas = acciones.filter(a => a.estado !== 'COMPLETADO' && a.estado !== 'Completado');
+        const accionesDelDia = accionesNoCompletadas.filter(a => {
+            const fechaAccion = new Date(a.fecha);
+            return fechaAccion.getDate() === dia && fechaAccion.getMonth() === mesActualAcciones.mes;
+        });
+        renderizarAccionesClasificadas(accionesDelDia, 'mensual');
+    });
 }
 
 function renderizarAccionesClasificadas(acciones, vista) {
@@ -694,9 +779,27 @@ function guardarEstadoAccion(idAccion) {
         estado: nuevoEstado
     }).then(response => {
         if (response.exito) {
-            document.querySelector('.modal').remove();
-            cargarAccionesGestor();
-            alert('Estado actualizado ✅');
+            // Cerrar modal
+            const modal = document.querySelector('.modal');
+            if (modal) modal.remove();
+            
+            // Recargar vista actual
+            const vistaActiva = document.querySelector('.acciones-vista.active');
+            if (vistaActiva.id === 'vista-semanal') {
+                llamarAppScript('obtenerAcciones', { mes: 'Junio' }).then(acciones => {
+                    const accionesNoCompletadas = acciones.filter(a => a.estado !== 'COMPLETADO' && a.estado !== 'Completado');
+                    renderizarVistaSemanal(accionesNoCompletadas);
+                });
+            } else {
+                llamarAppScript('obtenerAcciones', { mes: 'Junio' }).then(acciones => {
+                    const accionesNoCompletadas = acciones.filter(a => a.estado !== 'COMPLETADO' && a.estado !== 'Completado');
+                    renderizarVistaMensual(accionesNoCompletadas);
+                });
+            }
+            
+            console.log('✅ Estado actualizado a: ' + nuevoEstado);
+        } else {
+            alert('❌ Error al actualizar estado');
         }
     });
 }
