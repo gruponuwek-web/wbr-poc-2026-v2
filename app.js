@@ -42,6 +42,7 @@ function cargarVendedoresEnCompromiso() {
             select.appendChild(option);
         }
     });
+    document.getElementById('comp_vendedor').addEventListener('change', cargarCompromisosGuardados);
 }
 
 function loadDashboard() {
@@ -86,6 +87,8 @@ function loadDashboard() {
     });
 }
 
+// ===== COMPROMISOS =====
+
 function cargarCompromisos() {
     const mes = document.getElementById('comp_mes').value;
     const estado = document.getElementById('comp_filtro_estado').value;
@@ -111,6 +114,68 @@ function cargarCompromisos() {
     });
 }
 
+function cargarCompromisosGuardados() {
+    const mes = document.getElementById('comp_mes').value;
+    const vendedor = document.getElementById('comp_vendedor').value;
+    
+    if (!vendedor) {
+        document.getElementById('compromisosTableBody').innerHTML = '<tr><td colspan="6">Selecciona un vendedor</td></tr>';
+        return;
+    }
+    
+    llamarAppScript('obtenerCompromisos', { mes }).then(compromisos => {
+        const filtrados = compromisos.filter(c => 
+            c.mes === mes && c.vendedor === vendedor
+        );
+        
+        const tbody = document.getElementById('compromisosTableBody');
+        tbody.innerHTML = '';
+        
+        if (filtrados.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6">Sin compromisos guardados</td></tr>';
+            return;
+        }
+        
+        filtrados.forEach(c => {
+            const row = `<tr>
+                <td>${c.id}</td>
+                <td>${c.mes}</td>
+                <td>${c.vendedor}</td>
+                <td>${c.cliente}</td>
+                <td>${c.clasificacion}</td>
+                <td>${c.estado}</td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
+    });
+}
+
+function agregarCompromiso() {
+    const mes = document.getElementById('comp_mes').value;
+    const vendedor = document.getElementById('comp_vendedor').value;
+    const cliente = document.getElementById('comp_cliente').value;
+    const clasificacion = document.getElementById('comp_clasificacion').value;
+    
+    if (!vendedor || !cliente || !clasificacion) {
+        alert('Completa todos los campos');
+        return;
+    }
+    
+    llamarAppScript('agregarCompromiso', {
+        mes, vendedor, cliente, clasificacion,
+        usuario: usuarioActual
+    }).then(response => {
+        if (response.exito) {
+            document.getElementById('comp_cliente').value = '';
+            document.getElementById('comp_clasificacion').value = '';
+            cargarCompromisosGuardados();
+            alert('Compromiso guardado ✅');
+        }
+    });
+}
+
+// ===== WBR =====
+
 function mostrarTab(tabName) {
     document.getElementById('vista-pre-sesion').style.display = tabName === 'nueva-sesion' ? 'block' : 'none';
     document.getElementById('vista-post-sesion').style.display = 'none';
@@ -133,7 +198,9 @@ function cargarVendedoresWBR(mes, semana) {
     llamarAppScript('obtenerVendedores', {}).then(vendedores => {
         const container = document.getElementById('wbr-vendedores-container');
         container.innerHTML = '';
-        vendedores.filter(v => v.estado === 'Activo').forEach(vendedor => {
+        const activos = vendedores.filter(v => v.estado === 'Activo');
+        
+        activos.forEach((vendedor, index) => {
             const acordeon = `
                 <div class="wbr-vendedor" data-vendedor-id="${vendedor.id}">
                     <div class="wbr-vendedor-header" onclick="toggleVendedor(this)">
@@ -143,10 +210,13 @@ function cargarVendedoresWBR(mes, semana) {
                         </div>
                         <div class="wbr-vendedor-toggle">▼</div>
                     </div>
-                    <div class="wbr-vendedor-content show">
+                    <div class="wbr-vendedor-content ${index === 0 ? 'show' : ''}">
                         <div class="wbr-paso">
                             <div class="wbr-paso-titulo">PASO 1: Compromisos</div>
-                            <div id="paso1-${vendedor.id}"><div class="loading"><div class="spinner"></div></div></div>
+                            <div id="paso1-${vendedor.id}" style="display: flex; gap: 20px; align-items: flex-start;">
+                                <div id="paso1-lista-${vendedor.id}" style="flex: 1;"><div class="loading"><div class="spinner"></div></div></div>
+                                <div id="paso1-botones-${vendedor.id}" style="flex: 0.5;"><div class="loading"><div class="spinner"></div></div></div>
+                            </div>
                         </div>
                         <div class="wbr-paso">
                             <div class="wbr-paso-titulo">PASO 2: Descubrimientos/Retos</div>
@@ -155,7 +225,7 @@ function cargarVendedoresWBR(mes, semana) {
                         <div class="wbr-paso">
                             <div class="wbr-paso-titulo">PASO 3: Acciones</div>
                             <button class="btn-primary" onclick="abrirModalAccion('${vendedor.id}', '${vendedor.nombre}')">➕ Agregar Acción</button>
-                            <div id="paso3-${vendedor.id}"><div class="loading"><div class="spinner"></div></div></div>
+                            <div id="paso3-${vendedor.id}"></div>
                         </div>
                         <div style="margin-top: 20px; display: flex; gap: 10px;">
                             <button class="btn-success" onclick="guardarVendedorWBR('${vendedor.id}', '${vendedor.nombre}', '${mes}', '${semana}')">Guardar</button>
@@ -181,46 +251,79 @@ function toggleVendedor(header) {
 function cargarCompromisosWBR(mes, vendedor, vendedorId) {
     llamarAppScript('obtenerCompromisos', { mes }).then(compromisos => {
         const filtrados = compromisos.filter(c => c.vendedor === vendedor);
-        const html = filtrados.map(c => `
-            <button class="toggle-btn gris" data-id="${c.id}" data-estado="gris" onclick="toggleCompromiso('${c.id}', this)">
+        
+        // Lado IZQUIERDO - Lista de compromisos
+        const listaHTML = filtrados.map(c => 
+            `<div style="padding: 5px; border-bottom: 1px solid #ecf0f1;">
                 ${c.cliente} - ${c.clasificacion}
-            </button>
-        `).join('');
-        document.getElementById('paso1-' + vendedorId).innerHTML = html;
+            </div>`
+        ).join('');
+        
+        // Lado DERECHO - Botones toggle
+        const botonesHTML = filtrados.map(c => 
+            `<div style="display: flex; gap: 5px; margin-bottom: 10px;">
+                <button class="toggle-btn gris" data-id="${c.id}" data-estado="gris" onclick="toggleCompromiso('${c.id}', this)">○</button>
+                <button class="toggle-btn completado" data-id="${c.id}" data-estado="completado" onclick="toggleCompromiso('${c.id}', this)" style="opacity: 0.5;">✓</button>
+                <button class="toggle-btn no-completado" data-id="${c.id}" data-estado="no-completado" onclick="toggleCompromiso('${c.id}', this)" style="opacity: 0.5;">✗</button>
+            </div>`
+        ).join('');
+        
+        document.getElementById('paso1-lista-' + vendedorId).innerHTML = listaHTML || '<p>Sin compromisos</p>';
+        document.getElementById('paso1-botones-' + vendedorId).innerHTML = botonesHTML || '<p>-</p>';
     });
 }
 
 function toggleCompromiso(idCompromiso, btnElement) {
     const estadoActual = btnElement.getAttribute('data-estado');
     let nuevoEstado;
-    let nuevoTexto = btnElement.textContent.replace(/^[✓✗]\s/, '');
+    
     if (estadoActual === 'gris') {
         nuevoEstado = 'completado';
-        nuevoTexto = '✓ ' + nuevoTexto;
     } else if (estadoActual === 'completado') {
         nuevoEstado = 'no-completado';
-        nuevoTexto = '✗ ' + nuevoTexto;
     } else {
         nuevoEstado = 'gris';
     }
-    btnElement.textContent = nuevoTexto;
-    btnElement.classList.remove('gris', 'completado', 'no-completado');
-    btnElement.classList.add(nuevoEstado);
+    
     btnElement.setAttribute('data-estado', nuevoEstado);
+    
+    // Actualizar estilos de todos los botones en este grupo
+    const parent = btnElement.parentElement;
+    parent.querySelectorAll('button').forEach(btn => {
+        btn.style.opacity = '0.5';
+    });
+    btnElement.style.opacity = '1';
 }
 
 function cargarAccionesWBR(mes, vendedorId) {
     llamarAppScript('obtenerAcciones', { mes }).then(acciones => {
-        const filtradas = acciones.filter(a => a.estado !== 'COMPLETADO');
+        // FILTRAR: solo NO completadas
+        const filtradas = acciones.filter(a => a.estado !== 'COMPLETADO' && a.estado !== 'Completado');
+        
         if (filtradas.length === 0) {
-            document.getElementById('paso3-' + vendedorId).innerHTML = '<p>Sin acciones</p>';
+            document.getElementById('paso3-' + vendedorId).innerHTML = '<p style="color: #999; margin-top: 10px;">Sin acciones pendientes</p>';
             return;
         }
+        
         const html = `
-            <table class="wbr-tabla">
-                <thead><tr><th>Tipo</th><th>Descripción</th><th>Vencimiento</th><th>Responsable</th></tr></thead>
+            <table class="wbr-tabla" style="margin-top: 10px;">
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Descripción</th>
+                        <th>Vencimiento</th>
+                        <th>Responsable</th>
+                    </tr>
+                </thead>
                 <tbody>
-                    ${filtradas.map(a => `<tr><td>${a.tipo}</td><td>${a.descripcion}</td><td>${a.fecha_vencimiento || a.fecha}</td><td>${a.responsable}</td></tr>`).join('')}
+                    ${filtradas.map(a => `
+                        <tr>
+                            <td>${a.tipo}</td>
+                            <td>${a.descripcion}</td>
+                            <td>${a.fecha_vencimiento || a.fecha}</td>
+                            <td>${a.responsable}</td>
+                        </tr>
+                    `).join('')}
                 </tbody>
             </table>
         `;
@@ -289,7 +392,7 @@ function showSection(sectionId) {
     document.getElementById(sectionId).classList.add('active');
     document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
     event.target.classList.add('active');
-    if (sectionId === 'compromisos') cargarCompromisos();
+    if (sectionId === 'compromisos') cargarCompromisosGuardados();
 }
 
 function descargarPDF() {
