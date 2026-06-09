@@ -1,142 +1,22 @@
 // =======================================
-// WBR SISTEMA v3 - APP.JS (Sheets)
+// WBR SISTEMA v3 - APP.JS
 // =======================================
 
-let usuarioActual = 'Cargando...';
-let vendedoresData = [];
-let compromisosData = [];
-let wbrHistorico = {};
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx22j9B_70xAc3ZEuTRpAeSXE4a4Mt9Q34vh_9pZHH-n8DJx59wLDv9bu-qR9JkwFQy/exec';
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxV8fXIxW7stjX3I4Ysjh20VtPquQZgE6Y3MzcnNpHQCP_e3ZMsT9jPrruHOGudztsW/exec';
+let usuarioActual = 'Coordinador';
+let vendedoresData = [];
+let wbrHistorico = {};
+let wbrActualEditando = null;
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const SEMANAS_POR_MES = { 'Enero': 4, 'Febrero': 4, 'Marzo': 5, 'Abril': 4, 'Mayo': 5, 'Junio': 4, 'Julio': 5, 'Agosto': 4, 'Septiembre': 5, 'Octubre': 4, 'Noviembre': 5, 'Diciembre': 4 };
-
-// =======================================
-// DATOS DE PRUEBA (localStorage)
-// =======================================
-
-function inicializarDatos() {
-    // Si ya existen datos, no reinicializar
-    if (localStorage.getItem('wbr_vendedores')) return;
-    
-    // Vendedores de prueba
-    const vendedores = [
-        { id: '1', nombre: 'Hortencia Villa', estado: 'Activo' },
-        { id: '2', nombre: 'Elizabeth Díaz', estado: 'Activo' },
-        { id: '3', nombre: 'Amairani García', estado: 'Activo' },
-        { id: '4', nombre: 'Adriana Casas', estado: 'Activo' },
-        { id: '5', nombre: 'Itzel Hernández', estado: 'Activo' },
-        { id: '6', nombre: 'Verónica Cruz', estado: 'Activo' }
-    ];
-    
-    // Compromisos de prueba para Junio
-    const compromisos = [
-        { id: 'C1', mes: 'Junio', semana: 1, vendedor: 'Hortencia Villa', cliente: 'Cliente A', clasificacion: 'Propuesta', estado: 'Pendiente', fecha_creacion: new Date().toISOString() },
-        { id: 'C2', mes: 'Junio', semana: 1, vendedor: 'Hortencia Villa', cliente: 'Cliente B', clasificacion: 'Seguimiento', estado: 'Pendiente', fecha_creacion: new Date().toISOString() },
-        { id: 'C3', mes: 'Junio', semana: 2, vendedor: 'Hortencia Villa', cliente: 'Cliente C', clasificacion: 'Cierre', estado: 'Pendiente', fecha_creacion: new Date().toISOString() },
-        { id: 'C4', mes: 'Junio', semana: 1, vendedor: 'Elizabeth Díaz', cliente: 'Cliente D', clasificacion: 'Propuesta', estado: 'Pendiente', fecha_creacion: new Date().toISOString() },
-        { id: 'C5', mes: 'Junio', semana: 2, vendedor: 'Elizabeth Díaz', cliente: 'Cliente E', clasificacion: 'Seguimiento', estado: 'Pendiente', fecha_creacion: new Date().toISOString() },
-        { id: 'C6', mes: 'Junio', semana: 3, vendedor: 'Amairani García', cliente: 'Cliente F', clasificacion: 'Propuesta', estado: 'Pendiente', fecha_creacion: new Date().toISOString() }
-    ];
-    
-    // WBR sesiones
-    const wbr = [
-        { mes: 'Junio', semana: 1, estado: 'Pendiente', fecha_apertura: '', fecha_cierre: '', usuario: '' },
-        { mes: 'Junio', semana: 2, estado: 'Pendiente', fecha_apertura: '', fecha_cierre: '', usuario: '' },
-        { mes: 'Junio', semana: 3, estado: 'Pendiente', fecha_apertura: '', fecha_cierre: '', usuario: '' },
-        { mes: 'Junio', semana: 4, estado: 'Pendiente', fecha_apertura: '', fecha_cierre: '', usuario: '' }
-    ];
-    
-    // Guardar en localStorage
-    localStorage.setItem('wbr_vendedores', JSON.stringify(vendedores));
-    localStorage.setItem('wbr_compromisos', JSON.stringify(compromisos));
-    localStorage.setItem('wbr_sesiones', JSON.stringify(wbr));
-    localStorage.setItem('wbr_usuario', 'Cargando...');
-    
-    console.log('✅ Datos de prueba inicializados en localStorage');
-}
-
-// =======================================
-// FETCH (conectado a Sheets, con fallback a localStorage)
-// =======================================
-
-async function llamarAppScript(action, params = {}) {
-    // Construir URL con parámetros GET
-    const urlParams = new URLSearchParams({
-        action: action,
-        ...params
-    });
-    
-    const url = APPS_SCRIPT_URL + '?' + urlParams.toString();
-    
-    console.log(`📤 Llamando Apps Script: ${action}`, params);
-    
-    try {
-        const response = await fetch(url, {
-            method: 'GET',
-            mode: 'cors'
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log('✅ Respuesta (Sheets):', data);
-        return data;
-    } catch(error) {
-        console.warn('⚠️  Apps Script falló, usando localStorage como fallback:', error.message);
-        
-        // FALLBACK A LOCALHOST
-        return llamarLocalStorage(action, params);
-    }
-}
-
-// Fallback a localStorage (datos de prueba)
-function llamarLocalStorage(action, params = {}) {
-    console.log(`📦 Usando localStorage para: ${action}`);
-    
-    try {
-        switch(action) {
-            case 'obtenerVendedores':
-                return { exito: true, data: JSON.parse(localStorage.getItem('wbr_vendedores')) || [] };
-            
-            case 'obtenerCompromisos':
-                const compromisos = JSON.parse(localStorage.getItem('wbr_compromisos')) || [];
-                const filtrados = compromisos.filter(c => c.mes === params.mes);
-                return { exito: true, data: filtrados };
-            
-            case 'obtenerWBR':
-                const sesiones = JSON.parse(localStorage.getItem('wbr_sesiones')) || [];
-                const sesionesDelMes = sesiones.filter(s => s.mes === params.mes);
-                return { exito: true, data: sesionesDelMes };
-            
-            case 'actualizarEstadoCompromiso':
-                const allCompromisos = JSON.parse(localStorage.getItem('wbr_compromisos')) || [];
-                const compIndex = allCompromisos.findIndex(c => c.id === params.idCompromiso);
-                if (compIndex !== -1) {
-                    allCompromisos[compIndex].estado = params.completado === 'true' || params.completado === true ? 'Completado' : 'No Completado';
-                    localStorage.setItem('wbr_compromisos', JSON.stringify(allCompromisos));
-                    return { exito: true, mensaje: 'Estado actualizado (localStorage)' };
-                }
-                return { exito: false, mensaje: 'Compromiso no encontrado' };
-            
-            default:
-                return { exito: false, mensaje: 'Acción no reconocida' };
-        }
-    } catch(error) {
-        console.error('❌ Error en localStorage:', error);
-        return { exito: false, mensaje: 'Error: ' + error.message };
-    }
-}
 
 // =======================================
 // INICIALIZACIÓN
 // =======================================
 
 window.addEventListener('DOMContentLoaded', () => {
-    inicializarDatos();
     cargarDatos();
     actualizarFechaHora();
     setInterval(actualizarFechaHora, 1000);
@@ -150,57 +30,231 @@ function actualizarFechaHora() {
     const hora = String(now.getHours()).padStart(2, '0');
     const minuto = String(now.getMinutes()).padStart(2, '0');
     
-    const el = document.getElementById('fechaHora');
-    if (el) el.textContent = `${dia}/${mes}/${año} ${hora}:${minuto}`;
+    document.getElementById('fechaHora').textContent = `${dia}/${mes}/${año} ${hora}:${minuto}`;
 }
 
 function cargarDatos() {
     cargarVendedores();
+    loadDashboard();
     cargarWBRHistorico();
+}
+
+// =======================================
+// FETCH
+// =======================================
+
+async function llamarAppScript(action, params = {}) {
+    const body = new URLSearchParams({
+        action: action,
+        ...params
+    });
+
+    try {
+        const response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            body: body
+        });
+        const data = await response.json();
+        return data;
+    } catch(error) {
+        console.error('Error:', error);
+        return { exito: false, mensaje: 'Error de conexión' };
+    }
+}
+
+// =======================================
+// SECCIONES
+// =======================================
+
+function showSection(sectionId) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(sectionId).classList.add('active');
+
+    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+
+    if (sectionId === 'wbr') {
+        cargarWBRHistorico();
+    }
+    
+    if (sectionId === 'testacciones') {
+        cargarVendedoresParaTestAcciones();
+        cargarAccionesTest();
+    }
+    
+    if (sectionId === 'testdesc') {
+        cargarVendedoresParaTest();
+    }
+}
+
+// =======================================
+// UTILIDADES
+// =======================================
+
+function getWeekOfYear(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+function setLoadingButton(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    if (btn) btn.disabled = loading;
+}
+
+function mostrarMensaje(elementId, mensaje, tipo) {
+    const elemento = document.getElementById(elementId);
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${tipo}`;
+    messageDiv.textContent = mensaje;
+    elemento.innerHTML = '';
+    elemento.appendChild(messageDiv);
+    setTimeout(() => messageDiv.remove(), 4000);
 }
 
 // =======================================
 // VENDEDORES
 // =======================================
 
-async function cargarVendedores() {
-    const result = await llamarAppScript('obtenerVendedores');
-    if (result.exito) {
-        vendedoresData = result.data || [];
-        console.log('✅ Vendedores cargados:', vendedoresData);
-    } else {
-        console.error('❌ Error cargando vendedores:', result.mensaje);
-        vendedoresData = [];
+function cargarVendedores() {
+    llamarAppScript('obtenerVendedores').then(vendedores => {
+        vendedoresData = vendedores;
+        
+        const tbody = document.getElementById('vendedorTableBody');
+        tbody.innerHTML = '';
+        
+        if (vendedores.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4">No hay vendedores</td></tr>';
+        } else {
+            vendedores.forEach(v => {
+                const row = `<tr>
+                    <td>${v.id}</td>
+                    <td>${v.nombre}</td>
+                    <td><span class="badge badge-${v.estado.toLowerCase()}">${v.estado}</span></td>
+                    <td>${v.estado === 'Activo' ? `<button class="btn-danger" onclick="pausarVendedor(${v.id})">Pausar</button>` : 'Pausado'}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+        
+        actualizarSelectVendedores(vendedores);
+    });
+}
+
+function actualizarSelectVendedores(vendedores) {
+    const selects = ['compromiso_vendedor', 'accion_vendedor'];
+    selects.forEach(id => {
+        const select = document.getElementById(id);
+        select.innerHTML = '';
+        vendedores.forEach(v => {
+            if (v.estado === 'Activo') {
+                select.innerHTML += `<option value="${v.nombre}">${v.nombre}</option>`;
+            }
+        });
+    });
+}
+
+function agregarVendedor() {
+    const nombre = document.getElementById('nuevoVendedor').value;
+    if (!nombre) {
+        mostrarMensaje('vendedorMsg', 'Ingresa un nombre', 'error');
+        return;
     }
-}
-
-// =======================================
-// WBR - CARGAR HISTÓRICO
-// =======================================
-
-async function cargarWBRHistorico() {
-    // Solo carga Junio (mes actual)
-    cargarSesionesActuales();
-}
-
-// =======================================
-// WBR - CARGAR Y RENDERIZAR SESIONES
-// =======================================
-
-async function cargarSesionesActuales() {
-    // Solo carga sesiones que existen (actualmente Junio)
-    const result = await llamarAppScript('obtenerWBR', { mes: 'Junio' });
     
-    if (result.exito && result.data) {
-        const sesiones = result.data;
-        renderizarHeaderWBR(sesiones);
-        renderizarSesiones(sesiones);
-    } else {
-        // Fallback: usa datos de localStorage
-        const sesionesLocal = JSON.parse(localStorage.getItem('wbr_sesiones')) || [];
-        renderizarHeaderWBR(sesionesLocal);
-        renderizarSesiones(sesionesLocal);
+    setLoadingButton('btnAgregarVendedor', true);
+    llamarAppScript('agregarVendedor', { nombre }).then(response => {
+        setLoadingButton('btnAgregarVendedor', false);
+        if (response.exito) {
+            mostrarMensaje('vendedorMsg', '✅ Vendedor agregado', 'success');
+            document.getElementById('nuevoVendedor').value = '';
+            cargarVendedores();
+        }
+    });
+}
+
+function pausarVendedor(id) {
+    llamarAppScript('pausarVendedor', { id }).then(response => {
+        if (response.exito) cargarVendedores();
+    });
+}
+
+// =======================================
+// COMPROMISOS
+// =======================================
+
+function cargarCompromisos() {
+    const mes = document.getElementById('compromiso_mes').value;
+    llamarAppScript('obtenerCompromisos', { mes }).then(compromisos => {
+        const tbody = document.getElementById('compromisoTableBody');
+        tbody.innerHTML = '';
+        if (compromisos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5">Sin compromisos</td></tr>';
+        } else {
+            compromisos.forEach(c => {
+                const row = `<tr><td>${c.id.substring(0, 8)}...</td><td>${c.vendedor}</td><td>${c.cliente}</td><td>${c.clasificacion}</td><td>${c.estado}</td></tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+    });
+}
+
+function agregarCompromiso() {
+    const mes = document.getElementById('compromiso_mes').value;
+    const vendedor = document.getElementById('compromiso_vendedor').value;
+    const cliente = document.getElementById('compromiso_cliente').value;
+    const clasificacion = document.getElementById('compromiso_clasificacion').value;
+
+    if (!cliente || !vendedor) {
+        mostrarMensaje('compromisoMsg', 'Completa todos los campos', 'error');
+        return;
     }
+
+    setLoadingButton('btnAgregarCompromiso', true);
+    llamarAppScript('agregarCompromiso', { mes, vendedor, cliente, clasificacion, usuario: usuarioActual }).then(response => {
+        setLoadingButton('btnAgregarCompromiso', false);
+        if (response.exito) {
+            mostrarMensaje('compromisoMsg', '✅ Compromiso agregado', 'success');
+            document.getElementById('compromiso_cliente').value = '';
+            cargarCompromisos();
+        }
+    });
+}
+
+// =======================================
+// DASHBOARD
+// =======================================
+
+function loadDashboard() {
+    llamarAppScript('obtenerCompromisos', { mes: 'Junio' }).then(compromisos => {
+        let html = `<h3>Compromisos del mes: Junio</h3>`;
+        const resumen = { 'Prospección': 0, 'Crecimiento': 0, 'Recuperado': 0 };
+        compromisos.forEach(c => { resumen[c.clasificacion]++; });
+        
+        html += `<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 20px;">
+            <div class="info-card"><strong>🔍 Prospección</strong><p style="font-size: 28px; color: #27ae60; font-weight: bold; margin-top: 10px;">${resumen['Prospección']}</p></div>
+            <div class="info-card"><strong>📈 Crecimiento</strong><p style="font-size: 28px; color: #3498db; font-weight: bold; margin-top: 10px;">${resumen['Crecimiento']}</p></div>
+            <div class="info-card"><strong>✅ Recuperados</strong><p style="font-size: 28px; color: #8e44ad; font-weight: bold; margin-top: 10px;">${resumen['Recuperado']}</p></div>
+        </div>`;
+        
+        document.getElementById('dashboardContent').innerHTML = html;
+    });
+}
+
+// =======================================
+// WBR - HISTÓRICO CON ACORDEONES
+// =======================================
+
+function cargarWBRHistorico() {
+    llamarAppScript('obtenerWBR', { mes: 'Junio' }).then(sesiones => {
+        if (sesiones && sesiones.length > 0) {
+            renderizarHeaderWBR(sesiones);
+            renderizarSesionesNuevo(sesiones);
+        } else {
+            console.log('No hay sesiones WBR');
+        }
+    });
 }
 
 function renderizarHeaderWBR(sesiones) {
@@ -253,33 +307,18 @@ function renderizarHeaderWBR(sesiones) {
         btnCrear.style.background = '#27ae60';
         btnCrear.style.transform = 'scale(1)';
     };
-    btnCrear.onclick = () => crearNuevaSesion();
+    btnCrear.onclick = () => abrirFormularioWBR('Junio', sesionActual ? sesionActual.semana : 1);
     
     header.appendChild(info);
     header.appendChild(btnCrear);
     container.appendChild(header);
 }
 
-function renderizarSesiones(sesiones) {
+function renderizarSesionesNuevo(sesiones) {
     const container = document.getElementById('wbrAccordionContainer');
     if (!container) return;
     
     container.innerHTML = '';
-    
-    // Botón crear sesión
-    const btnCrear = document.createElement('button');
-    btnCrear.innerHTML = '➕ Crear Sesión';
-    btnCrear.style.padding = '12px 20px';
-    btnCrear.style.background = '#27ae60';
-    btnCrear.style.color = 'white';
-    btnCrear.style.border = 'none';
-    btnCrear.style.borderRadius = '5px';
-    btnCrear.style.cursor = 'pointer';
-    btnCrear.style.fontWeight = 'bold';
-    btnCrear.style.marginBottom = '20px';
-    btnCrear.style.fontSize = '14px';
-    btnCrear.onclick = () => crearNuevaSesion();
-    container.appendChild(btnCrear);
     
     // Separar activas y cerradas
     const activas = sesiones.filter(s => s.estado !== 'Cerrada');
@@ -316,10 +355,48 @@ function renderizarSesiones(sesiones) {
         contenidoActiva.style.padding = '20px';
         contenidoActiva.style.display = 'block'; // Abierto por defecto
         
-        // Aquí irán los acordeones de vendedoras
-        const acordeonesMes = document.createElement('div');
-        acordeonesMes.id = `acordeones-vendedoras-${sesionActual.semana}`;
-        contenidoActiva.appendChild(acordeonesMes);
+        // Botones de acción
+        const botonesDiv = document.createElement('div');
+        botonesDiv.style.display = 'flex';
+        botonesDiv.style.gap = '10px';
+        botonesDiv.style.marginBottom = '20px';
+        
+        const btnEditar = document.createElement('button');
+        btnEditar.textContent = '✏️ Editar';
+        btnEditar.style.padding = '8px 15px';
+        btnEditar.style.background = '#3498db';
+        btnEditar.style.color = 'white';
+        btnEditar.style.border = 'none';
+        btnEditar.style.borderRadius = '4px';
+        btnEditar.style.cursor = 'pointer';
+        btnEditar.style.fontSize = '12px';
+        btnEditar.onclick = () => abrirFormularioWBR('Junio', sesionActual.semana);
+        botonesDiv.appendChild(btnEditar);
+        
+        if (sesionActual.estado === 'Abierta') {
+            const btnCerrar = document.createElement('button');
+            btnCerrar.textContent = '🔒 Cerrar';
+            btnCerrar.style.padding = '8px 15px';
+            btnCerrar.style.background = '#e74c3c';
+            btnCerrar.style.color = 'white';
+            btnCerrar.style.border = 'none';
+            btnCerrar.style.borderRadius = '4px';
+            btnCerrar.style.cursor = 'pointer';
+            btnCerrar.style.fontSize = '12px';
+            botonesDiv.appendChild(btnCerrar);
+        }
+        
+        contenidoActiva.appendChild(botonesDiv);
+        
+        // Aquí irán los datos de la sesión (placeholder por ahora)
+        const datosDiv = document.createElement('div');
+        datosDiv.innerHTML = `
+            <p style="color: #666; font-size: 13px;">
+                <strong>Abierta:</strong> ${sesionActual.fecha_apertura || 'No especificada'}<br/>
+                <strong>Estado:</strong> ${sesionActual.estado}
+            </p>
+        `;
+        contenidoActiva.appendChild(datosDiv);
         
         // Toggle para abrir/cerrar
         headerActiva.onclick = () => {
@@ -331,9 +408,6 @@ function renderizarSesiones(sesiones) {
         seccionActiva.appendChild(headerActiva);
         seccionActiva.appendChild(contenidoActiva);
         container.appendChild(seccionActiva);
-        
-        // Cargar acordeones de vendedoras para esta sesión
-        cargarAcordeonesPorSemana(sesionActual.mes, sesionActual.semana, acordeonesMes);
     } else {
         const empty = document.createElement('p');
         empty.textContent = 'No hay sesiones activas';
@@ -387,7 +461,7 @@ function renderizarSesiones(sesiones) {
             const info = document.createElement('div');
             info.innerHTML = `
                 <h4 style="color: #2c3e50; margin: 0; font-size: 13px;">Semana ${sesion.semana}</h4>
-                <small style="color: #999;">Estado: Cerrada</small>
+                <small style="color: #999;">Cerrada: ${sesion.fecha_cierre || 'Sin fecha'}</small>
             `;
             
             const btnPDF = document.createElement('button');
@@ -399,6 +473,7 @@ function renderizarSesiones(sesiones) {
             btnPDF.style.borderRadius = '4px';
             btnPDF.style.cursor = 'pointer';
             btnPDF.style.fontSize = '11px';
+            btnPDF.onclick = () => descargarPDFWBR('Junio', sesion.semana);
             
             card.appendChild(info);
             card.appendChild(btnPDF);
@@ -419,377 +494,611 @@ function renderizarSesiones(sesiones) {
     }
 }
 
-async function cargarAcordeonesPorSemana(mes, semana, container) {
-    // Cargar compromisos del mes
-    const resultCompromisos = await llamarAppScript('obtenerCompromisos', { mes: mes });
-    const compromisos = resultCompromisos.exito ? resultCompromisos.data : [];
+// =======================================
+// FORMULARIO WBR EN MODAL
+// =======================================
+
+function abrirFormularioWBR(mes, semana) {
+    wbrActualEditando = { mes, semana };
     
-    // Filtrar solo compromisos de esta semana
-    const compromisosDelaMes = compromisos.filter(c => c.semana === semana || !c.semana);
+    const modal = document.getElementById('wbrFormModal');
+    document.getElementById('wbrFormTitle').textContent = `WBR - ${mes}, Semana ${semana}`;
     
-    console.log(`Cargando acordeones para ${mes} - Semana ${semana}:`, compromisosDelaMes);
-    
-    // Generar acordeones de vendedores
-    const vendedoresActivos = vendedoresData.filter(v => v.estado === 'Activo');
-    
-    vendedoresActivos.forEach(vendedor => {
-        // Filtrar compromisos de este vendedor
-        const compromisosDelVendedor = compromisosDelaMes.filter(c => c.vendedor === vendedor.nombre);
-        
-        const item = document.createElement('div');
-        item.style.background = '#f9f9f9';
-        item.style.borderLeft = '4px solid #2c3e50';
-        item.style.borderRadius = '5px';
-        item.style.overflow = 'hidden';
-        item.style.marginBottom = '10px';
-        
-        const header = document.createElement('div');
-        header.style.background = '#2c3e50';
-        header.style.color = 'white';
-        header.style.padding = '15px';
-        header.style.cursor = 'pointer';
-        header.style.fontWeight = 'bold';
-        header.style.userSelect = 'none';
-        header.style.display = 'flex';
-        header.style.justifyContent = 'space-between';
-        header.style.alignItems = 'center';
-        
-        const headerLeft = document.createElement('span');
-        headerLeft.textContent = `👤 ${vendedor.nombre}`;
-        
-        const headerRight = document.createElement('span');
-        headerRight.style.fontSize = '12px';
-        headerRight.style.fontWeight = 'normal';
-        const cumplidos = compromisosDelVendedor.filter(c => c.estado === 'Completado').length;
-        const total = compromisosDelVendedor.length;
-        headerRight.textContent = `(${cumplidos}/${total} compromisos) ▼`;
-        
-        header.appendChild(headerLeft);
-        header.appendChild(headerRight);
-        
-        const content = document.createElement('div');
-        content.className = 'wbr-content';
-        content.style.display = 'none';
-        content.style.padding = '15px';
-        content.style.background = 'white';
-        
-        // PASO 1: Compromisos
-        const paso1 = document.createElement('div');
-        paso1.style.marginBottom = '15px';
-        paso1.innerHTML = '<h4 style="color: #2c3e50; margin-bottom: 10px;">1️⃣ Compromisos</h4>';
-        
-        if (compromisosDelVendedor.length === 0) {
-            paso1.innerHTML += '<p style="color: #999; font-size: 12px;">No hay compromisos para este mes</p>';
-        } else {
-            const listaPaso1 = document.createElement('div');
-            compromisosDelVendedor.forEach(comp => {
-                const compItem = document.createElement('div');
-                compItem.style.background = '#f0f0f0';
-                compItem.style.padding = '10px';
-                compItem.style.borderRadius = '5px';
-                compItem.style.marginBottom = '8px';
-                compItem.style.display = 'flex';
-                compItem.style.justifyContent = 'space-between';
-                compItem.style.alignItems = 'center';
-                compItem.style.fontSize = '13px';
-                
-                const compInfo = document.createElement('div');
-                compInfo.style.flex = '1';
-                compInfo.innerHTML = `
-                    <strong style="color: #2c3e50;">${comp.cliente}</strong><br/>
-                    <small style="color: #666;">${comp.clasificacion}</small>
-                `;
-                
-                const compEstado = document.createElement('div');
-                compEstado.style.display = 'flex';
-                compEstado.style.gap = '5px';
-                
-                // Botón ✓ (Completado)
-                const btnCompletado = document.createElement('button');
-                btnCompletado.textContent = '✓';
-                btnCompletado.style.width = '30px';
-                btnCompletado.style.height = '30px';
-                btnCompletado.style.border = '2px solid #27ae60';
-                btnCompletado.style.borderRadius = '50%';
-                btnCompletado.style.cursor = 'pointer';
-                btnCompletado.style.background = comp.estado === 'Completado' ? '#27ae60' : 'white';
-                btnCompletado.style.color = comp.estado === 'Completado' ? 'white' : '#27ae60';
-                btnCompletado.style.fontWeight = 'bold';
-                btnCompletado.onclick = () => cambiarEstadoCompromiso(comp.id, 'Completado', btnCompletado);
-                
-                // Botón ✗ (No Completado)
-                const btnNoCompletado = document.createElement('button');
-                btnNoCompletado.textContent = '✗';
-                btnNoCompletado.style.width = '30px';
-                btnNoCompletado.style.height = '30px';
-                btnNoCompletado.style.border = '2px solid #e74c3c';
-                btnNoCompletado.style.borderRadius = '50%';
-                btnNoCompletado.style.cursor = 'pointer';
-                btnNoCompletado.style.background = comp.estado === 'No Completado' ? '#e74c3c' : 'white';
-                btnNoCompletado.style.color = comp.estado === 'No Completado' ? 'white' : '#e74c3c';
-                btnNoCompletado.style.fontWeight = 'bold';
-                btnNoCompletado.onclick = () => cambiarEstadoCompromiso(comp.id, 'No Completado', btnNoCompletado);
-                
-                compEstado.appendChild(btnCompletado);
-                compEstado.appendChild(btnNoCompletado);
-                
-                compItem.appendChild(compInfo);
-                compItem.appendChild(compEstado);
-                listaPaso1.appendChild(compItem);
-            });
-            paso1.appendChild(listaPaso1);
+    let html = '';
+    vendedoresData.forEach(vendedor => {
+        if (vendedor.estado === 'Activo') {
+            html += generarSeccionVendedor(vendedor, mes, semana);
         }
-        
-        content.appendChild(paso1);
-        
-        // PASO 2 y 3 (placeholders por ahora)
-        const paso2 = document.createElement('div');
-        paso2.innerHTML = '<h4 style="color: #2c3e50; margin-top: 15px; margin-bottom: 10px;">2️⃣ Descubrimientos</h4><p style="color: #999; font-size: 12px;">[Por implementar]</p>';
-        content.appendChild(paso2);
-        
-        const paso3 = document.createElement('div');
-        paso3.innerHTML = '<h4 style="color: #2c3e50; margin-top: 15px; margin-bottom: 10px;">3️⃣ Acciones</h4><p style="color: #999; font-size: 12px;">[Por implementar]</p>';
-        content.appendChild(paso3);
-        
-        header.onclick = (e) => {
-            content.style.display = content.style.display === 'none' ? 'block' : 'none';
-            headerRight.textContent = content.style.display === 'none' ? `(${cumplidos}/${total} compromisos) ▼` : `(${cumplidos}/${total} compromisos) ▲`;
-        };
-        
-        item.appendChild(header);
-        item.appendChild(content);
-        container.appendChild(item);
+    });
+    
+    document.getElementById('wbrFormContent').innerHTML = html;
+    modal.style.display = 'block';
+    
+    vendedoresData.forEach(v => {
+        if (v.estado === 'Activo') {
+            cargarCompromisosEnForm(v.nombre, mes);
+        }
     });
 }
 
-function crearNuevaSesion() {
-    // TODO: Implementar formulario para crear nueva sesión
-    alert('Crear nueva sesión - Por implementar');
-    console.log('Crear nueva sesión');
-}
-
-// =======================================
-// WBR - ABRIR SESIÓN CON ACORDEONES
-// =======================================
-
-async function abrirSesionWBR(mes, semana) {
-    console.log(`Abriendo sesión: ${mes} - Semana ${semana}`);
+function generarSeccionVendedor(vendedor, mes, semana) {
+    const vid = `v_${vendedor.id}`;
     
-    const wbrSection = document.getElementById('wbr');
-    if (!wbrSection) return;
-    
-    // Crear sección de vendedores
-    let vendedoresSection = document.getElementById('wbrVendedoresSection');
-    if (!vendedoresSection) {
-        vendedoresSection = document.createElement('div');
-        vendedoresSection.id = 'wbrVendedoresSection';
-        vendedoresSection.style.marginTop = '40px';
-        wbrSection.appendChild(vendedoresSection);
-    }
-    
-    vendedoresSection.style.display = 'block';
-    vendedoresSection.innerHTML = `
-        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 style="color: #2c3e50; margin: 0;">📅 ${mes} - Semana ${semana}</h3>
-                <button onclick="cerrarVendedoresWBR()" style="padding: 10px 20px; background: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">← Volver</button>
+    return `
+        <div style="background: #f9f9f9; padding: 20px; margin-bottom: 20px; border-radius: 8px; border-left: 4px solid #667eea;">
+            <h3>👤 ${vendedor.nombre}</h3>
+            
+            <div class="steps-container">
+                <!-- PASO 1: Compromisos CON PALOMITA Y TACHE -->
+                <div class="step">
+                    <h4><span class="step-number">1</span>Compromisos</h4>
+                    <div id="compromisos_${vid}" class="loading"><div class="spinner"></div></div>
+                    <div style="margin-top: 10px; font-size: 11px; color: #999;">
+                        ✓ = Completado | ✗ = No Completado
+                    </div>
+                </div>
+                
+                <!-- PASO 2: Descubrimientos y Retos (UN SOLO CAMPO) -->
+                <div class="step">
+                    <h4><span class="step-number">2</span>Desc. y Retos</h4>
+                    <div class="form-group">
+                        <label style="font-size: 12px;">Descubrimientos y Retos:</label>
+                        <textarea id="resumen_${vid}" placeholder="Ej: Mercado en crecimiento. Falta presupuesto. Buena comunicación." style="min-height: 100px; font-size: 12px;"></textarea>
+                    </div>
+                </div>
+                
+                <!-- PASO 3: Actividades -->
+                <div class="step">
+                    <h4><span class="step-number">3</span>Actividades</h4>
+                    <div class="form-group">
+                        <label style="font-size: 12px;">Próxima semana:</label>
+                        <textarea id="activ_${vid}" placeholder="Acciones para la próxima semana..." style="min-height: 100px; font-size: 12px;"></textarea>
+                    </div>
+                </div>
             </div>
-            <div id="wbrVendedoresAccordion" style="display: flex; flex-direction: column; gap: 15px;"></div>
         </div>
     `;
+}
+
+function cargarCompromisosEnForm(vendedorNombre, mes) {
+    llamarAppScript('obtenerCompromisosPorVendedor', { mes, vendedor: vendedorNombre }).then(compromisos => {
+        const vendedor = vendedoresData.find(v => v.nombre === vendedorNombre);
+        if (vendedor) {
+            const vid = `v_${vendedor.id}`;
+            const container = document.querySelector(`#compromisos_${vid}`);
+            
+            if (compromisos.length === 0) {
+                container.innerHTML = '<p style="color: #999; font-size: 12px;">Sin compromisos</p>';
+            } else {
+                container.innerHTML = compromisos.map(c => `
+                    <div class="compromise-item">
+                        <div style="display: flex; gap: 5px; margin-right: 8px;">
+                            <input type="radio" name="estado_${c.id}" value="completado" class="comp-estado" data-vid="${vid}" data-compromiso="${c.id}" data-estado="Completado">
+                            <span style="font-size: 11px; color: #27ae60; font-weight: bold;">✓</span>
+                        </div>
+                        <div style="display: flex; gap: 5px; margin-right: 10px;">
+                            <input type="radio" name="estado_${c.id}" value="nocompletado" class="comp-estado" data-vid="${vid}" data-compromiso="${c.id}" data-estado="No Completado">
+                            <span style="font-size: 11px; color: #e74c3c; font-weight: bold;">✗</span>
+                        </div>
+                        <label style="flex: 1; margin: 0; font-size: 13px;"><strong>${c.cliente}</strong></label>
+                    </div>
+                `).join('');
+            }
+        }
+    });
+}
+
+function guardarWBRCompleta() {
+    console.log('🔵 guardarWBRCompleta iniciada');
     
-    // Cargar compromisos
-    const resultCompromisos = await llamarAppScript('obtenerCompromisos', { mes: mes });
-    const compromisos = resultCompromisos.exito ? resultCompromisos.data : [];
-    console.log('Compromisos cargados:', compromisos);
+    if (!wbrActualEditando) {
+        console.error('❌ wbrActualEditando no definido');
+        return;
+    }
     
-    // Generar acordeones de vendedores
-    const vendedoresActivos = vendedoresData.filter(v => v.estado === 'Activo');
-    const vendedoresAccordion = document.getElementById('wbrVendedoresAccordion');
+    const { mes, semana } = wbrActualEditando;
+    console.log('📅 Guardando WBR:', mes, 'Semana:', semana);
     
-    vendedoresActivos.forEach(vendedor => {
-        // Filtrar compromisos de este vendedor
-        const compromisosDelVendedor = compromisos.filter(c => c.vendedor === vendedor.nombre);
-        
-        const item = document.createElement('div');
-        item.style.background = '#f9f9f9';
-        item.style.borderLeft = '4px solid #2c3e50';
-        item.style.borderRadius = '5px';
-        item.style.overflow = 'hidden';
-        item.style.marginBottom = '10px';
-        
-        const header = document.createElement('div');
-        header.style.background = '#2c3e50';
-        header.style.color = 'white';
-        header.style.padding = '15px';
-        header.style.cursor = 'pointer';
-        header.style.fontWeight = 'bold';
-        header.style.userSelect = 'none';
-        header.style.display = 'flex';
-        header.style.justifyContent = 'space-between';
-        header.style.alignItems = 'center';
-        
-        const headerLeft = document.createElement('span');
-        headerLeft.textContent = `👤 ${vendedor.nombre}`;
-        
-        const headerRight = document.createElement('span');
-        headerRight.style.fontSize = '12px';
-        headerRight.style.fontWeight = 'normal';
-        const cumplidos = compromisosDelVendedor.filter(c => c.estado === 'Completado').length;
-        const total = compromisosDelVendedor.length;
-        headerRight.textContent = `(${cumplidos}/${total} compromisos)`;
-        
-        header.appendChild(headerLeft);
-        header.appendChild(headerRight);
-        
-        const content = document.createElement('div');
-        content.className = 'wbr-content';
-        content.style.display = 'none';
-        content.style.padding = '15px';
-        content.style.background = 'white';
-        
-        // PASO 1: Compromisos
-        const paso1 = document.createElement('div');
-        paso1.style.marginBottom = '15px';
-        paso1.innerHTML = '<h4 style="color: #2c3e50; margin-bottom: 10px;">1️⃣ Compromisos</h4>';
-        
-        if (compromisosDelVendedor.length === 0) {
-            paso1.innerHTML += '<p style="color: #999; font-size: 12px;">No hay compromisos para este mes</p>';
-        } else {
-            const listaPaso1 = document.createElement('div');
-            compromisosDelVendedor.forEach(comp => {
-                const compItem = document.createElement('div');
-                compItem.style.background = '#f0f0f0';
-                compItem.style.padding = '10px';
-                compItem.style.borderRadius = '5px';
-                compItem.style.marginBottom = '8px';
-                compItem.style.display = 'flex';
-                compItem.style.justifyContent = 'space-between';
-                compItem.style.alignItems = 'center';
-                compItem.style.fontSize = '13px';
-                
-                const compInfo = document.createElement('div');
-                compInfo.style.flex = '1';
-                compInfo.innerHTML = `
-                    <strong style="color: #2c3e50;">${comp.cliente}</strong><br/>
-                    <small style="color: #666;">${comp.clasificacion}</small>
-                `;
-                
-                const compEstado = document.createElement('div');
-                compEstado.style.display = 'flex';
-                compEstado.style.gap = '5px';
-                
-                // Botón ✓ (Completado)
-                const btnCompletado = document.createElement('button');
-                btnCompletado.textContent = '✓';
-                btnCompletado.style.width = '30px';
-                btnCompletado.style.height = '30px';
-                btnCompletado.style.border = '2px solid #27ae60';
-                btnCompletado.style.borderRadius = '50%';
-                btnCompletado.style.cursor = 'pointer';
-                btnCompletado.style.background = comp.estado === 'Completado' ? '#27ae60' : 'white';
-                btnCompletado.style.color = comp.estado === 'Completado' ? 'white' : '#27ae60';
-                btnCompletado.style.fontWeight = 'bold';
-                btnCompletado.onclick = () => cambiarEstadoCompromiso(comp.id, 'Completado', btnCompletado);
-                
-                // Botón ✗ (No Completado)
-                const btnNoCompletado = document.createElement('button');
-                btnNoCompletado.textContent = '✗';
-                btnNoCompletado.style.width = '30px';
-                btnNoCompletado.style.height = '30px';
-                btnNoCompletado.style.border = '2px solid #e74c3c';
-                btnNoCompletado.style.borderRadius = '50%';
-                btnNoCompletado.style.cursor = 'pointer';
-                btnNoCompletado.style.background = comp.estado === 'No Completado' ? '#e74c3c' : 'white';
-                btnNoCompletado.style.color = comp.estado === 'No Completado' ? 'white' : '#e74c3c';
-                btnNoCompletado.style.fontWeight = 'bold';
-                btnNoCompletado.onclick = () => cambiarEstadoCompromiso(comp.id, 'No Completado', btnNoCompletado);
-                
-                compEstado.appendChild(btnCompletado);
-                compEstado.appendChild(btnNoCompletado);
-                
-                compItem.appendChild(compInfo);
-                compItem.appendChild(compEstado);
-                listaPaso1.appendChild(compItem);
+    setLoadingButton('btnGuardarWBR', true);
+    mostrarMensaje('wbrMsg', 'Guardando...', 'success');
+    
+    const promesasGuardar = [];
+    
+    vendedoresData.forEach(vendedor => {
+        if (vendedor.estado === 'Activo') {
+            const vid = `v_${vendedor.id}`;
+            console.log('👤 Procesando:', vendedor.nombre);
+            
+            const resumen = document.getElementById(`resumen_${vid}`)?.value || '';
+            const actividades = document.getElementById(`activ_${vid}`)?.value || '';
+            
+            console.log('  Resumen:', resumen.substring(0, 20) + '...');
+            console.log('  Actividades:', actividades.substring(0, 20) + '...');
+            
+            // Actualizar estado de compromisos (radio buttons: ✓ o ✗)
+            document.querySelectorAll(`.comp-estado[data-vid="${vid}"]`).forEach(radio => {
+                if (radio.checked) {
+                    const idComp = radio.getAttribute('data-compromiso');
+                    const estado = radio.getAttribute('data-estado');
+                    const completado = estado === 'Completado';
+                    
+                    console.log('  ✓ Compromiso:', idComp, '→', estado);
+                    
+                    const promesa = llamarAppScript('actualizarEstadoCompromiso', {
+                        idCompromiso: idComp,
+                        completado: completado.toString()
+                    });
+                    
+                    promesasGuardar.push(promesa);
+                }
             });
-            paso1.appendChild(listaPaso1);
-        }
-        
-        content.appendChild(paso1);
-        
-        // PASO 2 y 3 (placeholders por ahora)
-        const paso2 = document.createElement('div');
-        paso2.innerHTML = '<h4 style="color: #2c3e50; margin-top: 15px; margin-bottom: 10px;">2️⃣ Descubrimientos</h4><p style="color: #999; font-size: 12px;">[Por implementar]</p>';
-        content.appendChild(paso2);
-        
-        const paso3 = document.createElement('div');
-        paso3.innerHTML = '<h4 style="color: #2c3e50; margin-top: 15px; margin-bottom: 10px;">3️⃣ Acciones</h4><p style="color: #999; font-size: 12px;">[Por implementar]</p>';
-        content.appendChild(paso3);
-        
-        header.onclick = (e) => {
-            content.style.display = content.style.display === 'none' ? 'block' : 'none';
-        };
-        
-        item.appendChild(header);
-        item.appendChild(content);
-        vendedoresAccordion.appendChild(item);
-    });
-    
-    // Scroll a la sección
-    setTimeout(() => {
-        vendedoresSection.scrollIntoView({ behavior: 'smooth' });
-    }, 500);
-}
-
-function cerrarVendedoresWBR() {
-    const vendedoresSection = document.getElementById('wbrVendedoresSection');
-    if (vendedoresSection) {
-        vendedoresSection.style.display = 'none';
-        vendedoresSection.innerHTML = '';
-    }
-}
-
-async function cambiarEstadoCompromiso(idCompromiso, nuevoEstado, btnActual) {
-    console.log(`Actualizando compromiso ${idCompromiso} a estado: ${nuevoEstado}`);
-    
-    // Cambiar visualización del botón
-    btnActual.style.background = '#2c3e50';
-    btnActual.style.color = 'white';
-    
-    // Limpiar otros botones en el mismo grupo
-    const parent = btnActual.parentElement;
-    parent.querySelectorAll('button').forEach(btn => {
-        if (btn !== btnActual) {
-            btn.style.background = 'white';
-            btn.style.color = btn.textContent === '✓' ? '#27ae60' : '#e74c3c';
+            
+            // Guardar resumen (Paso 2)
+            if (resumen) {
+                console.log('  📝 Guardando resumen en WBR_RESUMEN');
+                const promesa = llamarAppScript('guardarWBRResumen', {
+                    mes,
+                    semana,
+                    vendedor: vendedor.nombre,
+                    descubrimientosRetos: resumen,
+                    usuario: usuarioActual
+                });
+                promesasGuardar.push(promesa);
+            }
+            
+            // Guardar actividades (Paso 3) como acciones
+            if (actividades) {
+                console.log('  ⚡ Guardando actividades en ACCIONES');
+                const promesa = llamarAppScript('agregarAccion', {
+                    mes,
+                    semana,
+                    tipo: 'Acción WBR',
+                    vendedor: vendedor.nombre,
+                    descripcion: actividades,
+                    responsable: vendedor.nombre,
+                    fecha: new Date().toISOString().split('T')[0],
+                    usuario: usuarioActual
+                });
+                promesasGuardar.push(promesa);
+            }
         }
     });
     
-    // Guardar en localStorage
-    const result = await llamarAppScript('actualizarEstadoCompromiso', { 
-        idCompromiso: idCompromiso, 
-        completado: nuevoEstado === 'Completado' ? true : false
-    });
+    console.log('🔄 Total de promesas:', promesasGuardar.length);
     
-    console.log('Resultado:', result);
-    if (!result.exito) {
-        alert('Error al guardar: ' + result.mensaje);
-    }
+    Promise.all(promesasGuardar).then(results => {
+        console.log('✅ Todas las promesas completadas:', results);
+        
+        llamarAppScript('cerrarWBR', { mes, semana }).then(response => {
+            console.log('🔒 Respuesta cerrarWBR:', response);
+            
+            setLoadingButton('btnGuardarWBR', false);
+            if (response.exito) {
+                mostrarMensaje('wbrMsg', '✅ WBR guardada correctamente', 'success');
+                setTimeout(() => {
+                    cerrarWBRForm();
+                    cargarWBRHistorico();
+                }, 1000);
+            } else {
+                mostrarMensaje('wbrMsg', '❌ Error al cerrar WBR: ' + response.mensaje, 'error');
+            }
+        }).catch(err => {
+            console.error('❌ Error en cerrarWBR:', err);
+            setLoadingButton('btnGuardarWBR', false);
+            mostrarMensaje('wbrMsg', '❌ Error: ' + err.toString(), 'error');
+        });
+    }).catch(err => {
+        console.error('❌ Error en Promise.all:', err);
+        setLoadingButton('btnGuardarWBR', false);
+        mostrarMensaje('wbrMsg', '❌ Error al guardar: ' + err.toString(), 'error');
+    });
+}
+
+function cerrarWBRForm() {
+    document.getElementById('wbrFormModal').style.display = 'none';
+}
+
+function verResumenWBR(mes, semana) {
+    mostrarMensaje('wbrMsg', 'Función en desarrollo', 'error');
+}
+
+function descargarPDFWBR(mes, semana) {
+    mostrarMensaje('wbrMsg', 'Función en desarrollo', 'error');
 }
 
 // =======================================
-// SECCIONES (UI)
+// TEST SIMPLE
 // =======================================
 
-function showSection(sectionId) {
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    const section = document.getElementById(sectionId);
-    if (section) section.classList.add('active');
-
-    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
-    if (event?.target) event.target.classList.add('active');
-
-    if (sectionId === 'wbr') {
-        cargarWBRHistorico();
+function testActualizar() {
+    const id = document.getElementById('test_id').value.trim();
+    const estado = document.getElementById('test_estado').value;
+    
+    if (!id) {
+        mostrarMensaje('testMsg', 'Ingresa un ID', 'error');
+        return;
     }
+    
+    console.log('🧪 TEST: Actualizando', id, '→', estado);
+    
+    llamarAppScript('actualizarEstadoCompromiso', {
+        idCompromiso: id,
+        completado: (estado === 'Completado').toString()
+    }).then(response => {
+        console.log('📤 Respuesta:', response);
+        
+        if (response.exito) {
+            mostrarMensaje('testMsg', '✅ ACTUALIZADO en Sheets. Verifica COMPROMISOS columna F', 'success');
+        } else {
+            mostrarMensaje('testMsg', '❌ Error: ' + response.mensaje, 'error');
+        }
+    }).catch(err => {
+        console.error('❌ Error:', err);
+        mostrarMensaje('testMsg', '❌ Fallo: ' + err, 'error');
+    });
+}
+
+function cargarEstados() {
+    const mes = document.getElementById('estados_mes').value;
+    console.log('🔵 cargarEstados: mes=' + mes);
+    
+    document.getElementById('estadosContent').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando...</div>';
+    
+    llamarAppScript('obtenerCompromisos', { mes }).then(compromisos => {
+        console.log('📊 Compromisos recibidos:', compromisos);
+        
+        if (!compromisos || compromisos.length === 0) {
+            console.log('⚠️ Sin compromisos');
+            document.getElementById('estadosContent').innerHTML = '<p style="color: #999;">Sin compromisos para este mes</p>';
+            return;
+        }
+        
+        console.log('✅ Renderizando ' + compromisos.length + ' compromisos');
+        
+        const html = compromisos.map(c => `
+            <div class="estado-item">
+                <div class="estado-label">
+                    <strong>${c.cliente}</strong>
+                    <small>${c.vendedor} • ${c.clasificacion}</small>
+                </div>
+                <select class="estado-select" id="select_${c.id}" onchange="cambiarEstado('${c.id}', this.value)">
+                    <option value="Pendiente" ${c.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                    <option value="Completado" ${c.estado === 'Completado' ? 'selected' : ''}>✓ Completado</option>
+                    <option value="No Completado" ${c.estado === 'No Completado' ? 'selected' : ''}>✗ No Completado</option>
+                </select>
+            </div>
+        `).join('');
+        
+        document.getElementById('estadosContent').innerHTML = html;
+        console.log('✅ Estados cargados');
+    }).catch(err => {
+        console.error('❌ Error:', err);
+        document.getElementById('estadosContent').innerHTML = '<p style="color: red;">Error al cargar: ' + err + '</p>';
+    });
+}
+
+function cambiarEstado(idCompromiso, nuevoEstado) {
+    console.log('🔄 cambiarEstado:', idCompromiso, '→', nuevoEstado);
+    
+    if (!window.estadosCambiados) {
+        window.estadosCambiados = {};
+    }
+    window.estadosCambiados[idCompromiso] = nuevoEstado;
+    
+    console.log('✅ Guardado en memoria. Total cambios:', Object.keys(window.estadosCambiados).length);
+}
+
+function guardarEstados() {
+    console.log('💾 INICIO guardarEstados');
+    console.log('📦 estadosCambiados:', window.estadosCambiados);
+    
+    if (!window.estadosCambiados || Object.keys(window.estadosCambiados).length === 0) {
+        console.log('⚠️ No hay cambios para guardar');
+        mostrarMensaje('estadosMsg', 'No hay cambios para guardar', 'error');
+        return;
+    }
+    
+    console.log('🔄 Guardando ' + Object.keys(window.estadosCambiados).length + ' cambios');
+    
+    setLoadingButton('btnGuardarEstados', true);
+    
+    const promesas = [];
+    for (const idComp in window.estadosCambiados) {
+        const nuevoEstado = window.estadosCambiados[idComp];
+        const completado = nuevoEstado === 'Completado';
+        
+        console.log('  📝 Actualizando:', idComp, '→', nuevoEstado);
+        
+        const promesa = llamarAppScript('actualizarEstadoCompromiso', {
+            idCompromiso: idComp,
+            completado: completado.toString()
+        });
+        
+        promesas.push(promesa);
+    }
+    
+    console.log('⏳ Esperando ' + promesas.length + ' promesas...');
+    
+    Promise.all(promesas).then(resultados => {
+        console.log('✅ Respuestas:', resultados);
+        setLoadingButton('btnGuardarEstados', false);
+        
+        const exitosos = resultados.filter(r => r.exito).length;
+        if (exitosos === resultados.length) {
+            console.log('🎉 ÉXITO: ' + exitosos + ' actualizados');
+            mostrarMensaje('estadosMsg', `✅ ${exitosos} compromisos actualizados`, 'success');
+            window.estadosCambiados = {};
+            cargarEstados();
+        } else {
+            console.log('⚠️ PARCIAL: ' + exitosos + '/' + resultados.length);
+            mostrarMensaje('estadosMsg', `⚠️ ${exitosos}/${resultados.length} actualizados`, 'error');
+        }
+    }).catch(err => {
+        console.error('❌ ERROR EN PROMISE.ALL:', err);
+        setLoadingButton('btnGuardarEstados', false);
+        mostrarMensaje('estadosMsg', '❌ Error: ' + err, 'error');
+    });
+}
+
+function cargarAcciones() {
+    const mes = document.getElementById('accion_mes').value;
+    llamarAppScript('obtenerAcciones', { mes }).then(acciones => {
+        const tbody = document.getElementById('accionTableBody');
+        tbody.innerHTML = '';
+        if (acciones.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6">Sin acciones</td></tr>';
+        } else {
+            acciones.forEach(a => {
+                const row = `<tr><td>${a.tipo}</td><td>${a.vendedor}</td><td>${a.descripcion}</td><td>${a.responsable}</td><td>${a.fecha}</td><td>${a.estado}</td></tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+    });
+}
+
+function agregarAccion() {
+    const mes = document.getElementById('accion_mes').value;
+    const semana = document.getElementById('accion_semana').value;
+    const tipo = document.getElementById('accion_tipo').value;
+    const vendedor = document.getElementById('accion_vendedor').value;
+    const descripcion = document.getElementById('accion_descripcion').value;
+    const responsable = document.getElementById('accion_responsable').value;
+    const fecha = document.getElementById('accion_fecha').value;
+
+    if (!descripcion || !responsable) {
+        mostrarMensaje('accionMsg', 'Completa todos los campos', 'error');
+        return;
+    }
+
+    setLoadingButton('btnAgregarAccion', true);
+    llamarAppScript('agregarAccion', { mes, semana, tipo, vendedor, descripcion, responsable, fecha, usuario: usuarioActual }).then(response => {
+        setLoadingButton('btnAgregarAccion', false);
+        if (response.exito) {
+            mostrarMensaje('accionMsg', '✅ Acción creada', 'success');
+            document.getElementById('accion_descripcion').value = '';
+            document.getElementById('accion_responsable').value = '';
+            cargarAcciones();
+        }
+    });
+}
+
+// =======================================
+// TEST DESC/RETOS
+// =======================================
+
+function cargarVendedoresParaTest() {
+    const select = document.getElementById('testdesc_vendedor');
+    select.innerHTML = '';
+    
+    vendedoresData.forEach(v => {
+        if (v.estado === 'Activo') {
+            const option = document.createElement('option');
+            option.value = v.nombre;
+            option.textContent = v.nombre;
+            select.appendChild(option);
+        }
+    });
+}
+
+function testDescGuardar() {
+    const mes = document.getElementById('testdesc_mes').value;
+    const semana = document.getElementById('testdesc_semana').value;
+    const vendedor = document.getElementById('testdesc_vendedor').value;
+    const texto = document.getElementById('testdesc_texto').value.trim();
+    
+    if (!mes || !semana || !vendedor || !texto) {
+        mostrarMensaje('testdescMsg', '❌ Completa todos los campos', 'error');
+        return;
+    }
+    
+    console.log('📝 TEST DESC: Guardando', mes, 'Semana', semana, vendedor);
+    
+    llamarAppScript('guardarWBRResumen', {
+        mes: mes,
+        semana: semana,
+        vendedor: vendedor,
+        descubrimientosRetos: texto,
+        usuario: usuarioActual
+    }).then(response => {
+        console.log('📤 Respuesta:', response);
+        
+        if (response.exito) {
+            mostrarMensaje('testdescMsg', '✅ GUARDADO en WBR_RESUMEN. Verifica Sheets', 'success');
+            document.getElementById('testdesc_texto').value = '';
+        } else {
+            mostrarMensaje('testdescMsg', '❌ Error: ' + response.mensaje, 'error');
+        }
+    }).catch(err => {
+        console.error('❌ Error:', err);
+        mostrarMensaje('testdescMsg', '❌ Fallo: ' + err, 'error');
+    });
+}
+
+// =======================================
+// TEST ACCIONES
+// =======================================
+
+function cargarVendedoresParaTestAcciones() {
+    const select = document.getElementById('testa_vendedor');
+    select.innerHTML = '';
+    
+    vendedoresData.forEach(v => {
+        if (v.estado === 'Activo') {
+            const option = document.createElement('option');
+            option.value = v.nombre;
+            option.textContent = v.nombre;
+            select.appendChild(option);
+        }
+    });
+}
+
+function testAccionGuardar() {
+    const mes = document.getElementById('testa_mes').value;
+    const semana = document.getElementById('testa_semana').value;
+    const tipo = document.getElementById('testa_tipo').value;
+    const vendedor = document.getElementById('testa_vendedor').value;
+    const descripcion = document.getElementById('testa_descripcion').value.trim();
+    const responsable = document.getElementById('testa_responsable').value.trim();
+    const fecha = document.getElementById('testa_fecha').value;
+    const estado = document.getElementById('testa_estado').value;
+    
+    if (!mes || !semana || !tipo || !vendedor || !descripcion || !responsable || !fecha) {
+        mostrarMensaje('testaMsg', '❌ Completa todos los campos', 'error');
+        return;
+    }
+    
+    console.log('⚡ TEST ACCIÓN: Guardando', tipo, 'para', vendedor);
+    
+    llamarAppScript('agregarAccion', {
+        mes: mes,
+        semana: semana,
+        tipo: tipo,
+        vendedor: vendedor,
+        descripcion: descripcion,
+        responsable: responsable,
+        fecha_vencimiento: fecha,
+        estado: estado,
+        usuario: usuarioActual
+    }).then(response => {
+        console.log('📤 Respuesta:', response);
+        
+        if (response.exito) {
+            mostrarMensaje('testaMsg', '✅ GUARDADO en ACCIONES. Verifica Sheets', 'success');
+            document.getElementById('testa_descripcion').value = '';
+            document.getElementById('testa_responsable').value = '';
+            document.getElementById('testa_fecha').value = '';
+        } else {
+            mostrarMensaje('testaMsg', '❌ Error: ' + response.mensaje, 'error');
+        }
+    }).catch(err => {
+        console.error('❌ Error:', err);
+        mostrarMensaje('testaMsg', '❌ Fallo: ' + err, 'error');
+    });
+}
+
+// =======================================
+// TEST ACTUALIZAR ACCIÓN
+// =======================================
+
+function testAccActualizar() {
+    const id = document.getElementById('testacc_id').value.trim();
+    const estado = document.getElementById('testacc_estado').value;
+    
+    if (!id) {
+        mostrarMensaje('testaccMsg', '❌ Ingresa un ID de acción', 'error');
+        return;
+    }
+    
+    console.log('🔄 TEST ACCIÓN: Actualizando', id, '→', estado);
+    
+    llamarAppScript('actualizarEstadoAccion', {
+        idAccion: id,
+        estado: estado
+    }).then(response => {
+        console.log('📤 Respuesta:', response);
+        
+        if (response.exito) {
+            mostrarMensaje('testaccMsg', '✅ ACTUALIZADO en ACCIONES. Verifica Sheets columna Estado', 'success');
+        } else {
+            mostrarMensaje('testaccMsg', '❌ Error: ' + response.mensaje, 'error');
+        }
+    }).catch(err => {
+        console.error('❌ Error:', err);
+        mostrarMensaje('testaccMsg', '❌ Fallo: ' + err, 'error');
+    });
+}
+
+// =======================================
+// CARGAR Y ACTUALIZAR ACCIONES EN TEST
+// =======================================
+
+function cargarAccionesTest() {
+    const mes = document.getElementById('listacc_mes').value;
+    
+    console.log('🔵 cargarAccionesTest: mes=' + mes);
+    
+    llamarAppScript('obtenerAcciones', { mes }).then(acciones => {
+        console.log('📊 Acciones recibidas:', acciones);
+        
+        if (!acciones || acciones.length === 0) {
+            document.getElementById('listaAccionesTest').innerHTML = '<p style="color: #999;">Sin acciones para este mes</p>';
+            return;
+        }
+        
+        const html = acciones.map(a => `
+            <div style="background: white; padding: 15px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                    <div>
+                        <strong>${a.descripcion}</strong>
+                        <small style="display: block; color: #666; margin-top: 3px;">
+                            ${a.tipo} • ${a.vendedor} • Resp: ${a.responsable}
+                        </small>
+                    </div>
+                    <div style="text-align: right; font-size: 12px; color: #999;">
+                        ID: ${a.id}<br>
+                        Vence: ${a.fecha_vencimiento}
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <select id="estado_${a.id}" style="padding: 6px; border: 1px solid #bbb; border-radius: 3px; font-size: 13px;">
+                        <option value="Pendiente" ${a.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                        <option value="En Progreso" ${a.estado === 'En Progreso' ? 'selected' : ''}>En Progreso</option>
+                        <option value="Completado" ${a.estado === 'Completado' ? 'selected' : ''}>Completado</option>
+                    </select>
+                    <button class="btn-primary" onclick="actualizarAccionTest('${a.id}')" style="padding: 6px 15px; font-size: 13px;">Actualizar</button>
+                </div>
+            </div>
+        `).join('');
+        
+        document.getElementById('listaAccionesTest').innerHTML = html;
+        console.log('✅ Acciones cargadas');
+    }).catch(err => {
+        console.error('❌ Error:', err);
+        document.getElementById('listaAccionesTest').innerHTML = '<p style="color: red;">Error al cargar</p>';
+    });
+}
+
+function actualizarAccionTest(idAccion) {
+    const selectId = 'estado_' + idAccion;
+    const nuevoEstado = document.getElementById(selectId).value;
+    
+    console.log('🔄 Actualizando acción', idAccion, '→', nuevoEstado);
+    
+    llamarAppScript('actualizarEstadoAccion', {
+        idAccion: idAccion,
+        estado: nuevoEstado
+    }).then(response => {
+        console.log('📤 Respuesta:', response);
+        
+        if (response.exito) {
+            console.log('✅ Acción actualizada');
+            mostrarMensaje('testaMsg', '✅ Acción actualizada', 'success');
+        } else {
+            console.error('❌ Error:', response.mensaje);
+            mostrarMensaje('testaMsg', '❌ Error: ' + response.mensaje, 'error');
+        }
+    }).catch(err => {
+        console.error('❌ Error:', err);
+        mostrarMensaje('testaMsg', '❌ Fallo: ' + err, 'error');
+    });
 }
