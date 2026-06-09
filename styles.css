@@ -481,3 +481,209 @@ tr:hover {
     gap: 10px;
     justify-content: flex-end;
 }
+
+/* ACCIONES - VISTAS */
+.acciones-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid #ecf0f1;
+    margin-bottom: 20px;
+}
+
+.acciones-tab {
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s;
+}
+
+.acciones-tab.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+}
+
+.acciones-vista {
+    display: none;
+}
+
+.acciones-vista.active {
+    display: block;
+}
+
+/* KANBAN */
+.kanban-container {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.kanban-column {
+    background: #f9f9f9;
+    border-radius: 8px;
+    padding: 15px;
+    min-height: 300px;
+}
+
+.kanban-header {
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 15px;
+    text-align: center;
+    font-size: 13px;
+}
+
+.kanban-card {
+    background: white;
+    border-left: 4px solid #667eea;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 12px;
+}
+
+.kanban-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.kanban-card.pendiente { border-left-color: #f39c12; }
+.kanban-card.completado { border-left-color: #27ae60; }
+.kanban-card.cancelada { border-left-color: #e74c3c; }
+
+.kanban-card-tipo {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.kanban-card-desc {
+    color: #666;
+    margin-top: 3px;
+}
+
+.kanban-card-resp {
+    color: #999;
+    font-size: 11px;
+    margin-top: 5px;
+}
+
+/* CALENDARIO */
+.calendario-container {
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.calendario-header {
+    font-size: 18px;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.calendario-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.calendario-dia {
+    background: white;
+    padding: 15px;
+    border-radius: 5px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.calendario-dia:hover {
+    background: #f0f4ff;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.calendario-numero {
+    font-weight: bold;
+    color: #2c3e50;
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.calendario-count {
+    font-size: 12px;
+    color: #667eea;
+    font-weight: bold;
+}
+
+/* ACCIONES CLASIFICADAS */
+.acciones-clasificadas {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #ecf0f1;
+}
+
+.clasificada-grupo {
+    margin-bottom: 20px;
+}
+
+.clasificada-titulo {
+    font-weight: bold;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+.clasificada-titulo.retrasadas {
+    background: #e74c3c;
+}
+
+.clasificada-titulo.hoy {
+    background: #f39c12;
+}
+
+.clasificada-titulo.manana {
+    background: #27ae60;
+}
+
+.clasificada-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.clasificada-tabla th {
+    background: #ecf0f1;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.clasificada-tabla td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #ecf0f1;
+    cursor: pointer;
+}
+
+.clasificada-tabla tr:hover {
+    background: #f9f9f9;
+}
+
+.clasificada-tabla tr:hover td {
+    color: #667eea;
+}
