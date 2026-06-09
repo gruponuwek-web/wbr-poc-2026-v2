@@ -193,12 +193,61 @@ async function cargarSesionesActuales() {
     
     if (result.exito && result.data) {
         const sesiones = result.data;
+        renderizarHeaderWBR(sesiones);
         renderizarSesiones(sesiones);
     } else {
         // Fallback: usa datos de localStorage
         const sesionesLocal = JSON.parse(localStorage.getItem('wbr_sesiones')) || [];
+        renderizarHeaderWBR(sesionesLocal);
         renderizarSesiones(sesionesLocal);
     }
+}
+
+function renderizarHeaderWBR(sesiones) {
+    const container = document.getElementById('timelineMeses');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    // Obtener la sesión activa más reciente
+    const activas = sesiones.filter(s => s.estado !== 'Cerrada');
+    const sesionActual = activas.length > 0 ? activas[activas.length - 1] : null;
+    
+    // Header con info del mes y botón
+    const header = document.createElement('div');
+    header.style.background = 'white';
+    header.style.padding = '15px 20px';
+    header.style.borderRadius = '5px';
+    header.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'center';
+    header.style.marginBottom = '20px';
+    
+    // Lado izquierdo: Info del mes y semana
+    const info = document.createElement('div');
+    if (sesionActual) {
+        info.innerHTML = `<h3 style="color: #2c3e50; margin: 0; font-size: 16px;">📅 ${sesionActual.mes} - Semana ${sesionActual.semana}</h3>`;
+    } else {
+        info.innerHTML = `<h3 style="color: #2c3e50; margin: 0; font-size: 16px;">📅 Junio</h3>`;
+    }
+    
+    // Lado derecho: Botón
+    const btnCrear = document.createElement('button');
+    btnCrear.innerHTML = '➕ Crear Sesión';
+    btnCrear.style.padding = '10px 20px';
+    btnCrear.style.background = '#27ae60';
+    btnCrear.style.color = 'white';
+    btnCrear.style.border = 'none';
+    btnCrear.style.borderRadius = '5px';
+    btnCrear.style.cursor = 'pointer';
+    btnCrear.style.fontWeight = 'bold';
+    btnCrear.style.fontSize = '13px';
+    btnCrear.onclick = () => crearNuevaSesion();
+    
+    header.appendChild(info);
+    header.appendChild(btnCrear);
+    container.appendChild(header);
 }
 
 function renderizarSesiones(sesiones) {
