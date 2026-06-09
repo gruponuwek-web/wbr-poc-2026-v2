@@ -77,6 +77,10 @@ function showSection(sectionId) {
         cargarWBRHistorico();
     }
     
+    if (sectionId === 'testacciones') {
+        cargarVendedoresParaTestAcciones();
+    }
+    
     if (sectionId === 'testdesc') {
         cargarVendedoresParaTest();
     }
@@ -775,5 +779,67 @@ function testDescGuardar() {
     }).catch(err => {
         console.error('❌ Error:', err);
         mostrarMensaje('testdescMsg', '❌ Fallo: ' + err, 'error');
+    });
+}
+
+// =======================================
+// TEST ACCIONES
+// =======================================
+
+function cargarVendedoresParaTestAcciones() {
+    const select = document.getElementById('testa_vendedor');
+    select.innerHTML = '';
+    
+    vendedoresData.forEach(v => {
+        if (v.estado === 'Activo') {
+            const option = document.createElement('option');
+            option.value = v.nombre;
+            option.textContent = v.nombre;
+            select.appendChild(option);
+        }
+    });
+}
+
+function testAccionGuardar() {
+    const mes = document.getElementById('testa_mes').value;
+    const semana = document.getElementById('testa_semana').value;
+    const tipo = document.getElementById('testa_tipo').value;
+    const vendedor = document.getElementById('testa_vendedor').value;
+    const descripcion = document.getElementById('testa_descripcion').value.trim();
+    const responsable = document.getElementById('testa_responsable').value.trim();
+    const fecha = document.getElementById('testa_fecha').value;
+    const estado = document.getElementById('testa_estado').value;
+    
+    if (!mes || !semana || !tipo || !vendedor || !descripcion || !responsable || !fecha) {
+        mostrarMensaje('testaMsg', '❌ Completa todos los campos', 'error');
+        return;
+    }
+    
+    console.log('⚡ TEST ACCIÓN: Guardando', tipo, 'para', vendedor);
+    
+    llamarAppScript('agregarAccion', {
+        mes: mes,
+        semana: semana,
+        tipo: tipo,
+        vendedor: vendedor,
+        descripcion: descripcion,
+        responsable: responsable,
+        fecha_vencimiento: fecha,
+        estado: estado,
+        usuario: usuarioActual
+    }).then(response => {
+        console.log('📤 Respuesta:', response);
+        
+        if (response.exito) {
+            mostrarMensaje('testaMsg', '✅ GUARDADO en ACCIONES. Verifica Sheets', 'success');
+            document.getElementById('testa_descripcion').value = '';
+            document.getElementById('testa_responsable').value = '';
+            document.getElementById('testa_fecha').value = '';
+        } else {
+            mostrarMensaje('testaMsg', '❌ Error: ' + response.mensaje, 'error');
+        }
+    }).catch(err => {
+        console.error('❌ Error:', err);
+        mostrarMensaje('testaMsg', '❌ Fallo: ' + err, 'error');
     });
 }
