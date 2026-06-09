@@ -2,7 +2,7 @@
 // WBR SISTEMA v3 - APP.JS
 // =======================================
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxCeYSJtZOWwPZ3XQUQf17DPoGVUXs1AlcX7VK1Obo4XuSNycXnvgdi_StL2UxAfx8/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx22j9B_70xAc3ZEuTRpAeSXE4a4Mt9Q34vh_9pZHH-n8DJx59wLDv9bu-qR9JkwFQy/exec';
 
 let usuarioActual = 'Coordinador';
 let vendedoresData = [];
