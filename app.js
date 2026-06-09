@@ -1,8 +1,8 @@
 // =======================================
 // WBR SISTEMA v3 - APP.JS
-// LÓGICA DE UI Y FUNCIONES
-// (Conexión AppScript está en api-handler.js)
 // =======================================
+
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx22j9B_70xAc3ZEuTRpAeSXE4a4Mt9Q34vh_9pZHH-n8DJx59wLDv9bu-qR9JkwFQy/exec';
 
 let usuarioActual = 'Coordinador';
 let vendedoresData = [];
@@ -40,6 +40,29 @@ function cargarDatos() {
 }
 
 // =======================================
+// FETCH
+// =======================================
+
+async function llamarAppScript(action, params = {}) {
+    const body = new URLSearchParams({
+        action: action,
+        ...params
+    });
+
+    try {
+        const response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            body: body
+        });
+        const data = await response.json();
+        return data;
+    } catch(error) {
+        console.error('Error:', error);
+        return { exito: false, mensaje: 'Error de conexión' };
+    }
+}
+
+// =======================================
 // SECCIONES
 // =======================================
 
@@ -50,6 +73,10 @@ function showSection(sectionId) {
     document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
     event.target.classList.add('active');
 
+    if (sectionId === 'compromisos') {
+        cargarCompromisos();
+    }
+    
     if (sectionId === 'wbr') {
         cargarWBRHistorico();
     }
@@ -164,13 +191,13 @@ function pausarVendedor(id) {
 function cargarCompromisos() {
     const mes = document.getElementById('compromiso_mes').value;
     llamarAppScript('obtenerCompromisos', { mes }).then(compromisos => {
-        const tbody = document.getElementById('compromiso_tabla');
+        const tbody = document.getElementById('compromisoTableBody');
         tbody.innerHTML = '';
         if (compromisos.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5">Sin compromisos</td></tr>';
         } else {
             compromisos.forEach(c => {
-                const row = `<tr><td>${c.id.substring(0, 8)}...</td><td>${c.mes}</td><td>${c.vendedor}</td><td>${c.cliente}</td><td>${c.clasificacion}</td><td>${c.estado}</td></tr>`;
+                const row = `<tr><td>${c.id.substring(0, 8)}...</td><td>${c.vendedor}</td><td>${c.cliente}</td><td>${c.clasificacion}</td><td>${c.estado}</td></tr>`;
                 tbody.innerHTML += row;
             });
         }
@@ -195,8 +222,6 @@ function agregarCompromiso() {
             mostrarMensaje('compromisoMsg', '✅ Compromiso agregado', 'success');
             document.getElementById('compromiso_cliente').value = '';
             cargarCompromisos();
-        } else {
-            mostrarMensaje('compromisoMsg', '❌ Error: ' + response.mensaje, 'error');
         }
     });
 }
@@ -206,200 +231,478 @@ function agregarCompromiso() {
 // =======================================
 
 function loadDashboard() {
-    const html = `
-        <div class="info-card">
-            <p><strong>Vendedores Activos:</strong> ${vendedoresData.filter(v => v.estado === 'Activo').length}</p>
-        </div>
-        <div class="info-card">
-            <p><strong>Sistema Activo:</strong> ✅ Conectado a Google Sheets</p>
-        </div>
-    `;
-    const dashDiv = document.getElementById('dashboardContent');
-    if (dashDiv) dashDiv.innerHTML = html;
+    llamarAppScript('obtenerCompromisos', { mes: 'Junio' }).then(compromisos => {
+        let html = `<h3>Compromisos del mes: Junio</h3>`;
+        const resumen = { 'Prospección': 0, 'Crecimiento': 0, 'Recuperado': 0 };
+        compromisos.forEach(c => { resumen[c.clasificacion]++; });
+        
+        html += `<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 20px;">
+            <div class="info-card"><strong>🔍 Prospección</strong><p style="font-size: 28px; color: #27ae60; font-weight: bold; margin-top: 10px;">${resumen['Prospección']}</p></div>
+            <div class="info-card"><strong>📈 Crecimiento</strong><p style="font-size: 28px; color: #3498db; font-weight: bold; margin-top: 10px;">${resumen['Crecimiento']}</p></div>
+            <div class="info-card"><strong>✅ Recuperados</strong><p style="font-size: 28px; color: #8e44ad; font-weight: bold; margin-top: 10px;">${resumen['Recuperado']}</p></div>
+        </div>`;
+        
+        document.getElementById('dashboardContent').innerHTML = html;
+    });
 }
 
 // =======================================
-// ESTADOS - COMPROMISOS
+// WBR - HISTÓRICO CON ACORDEONES
 // =======================================
+
+function cargarWBRHistorico() {
+    llamarAppScript('obtenerWBR', { mes: 'Junio' }).then(wbrs => {
+        wbrHistorico = {};
+        wbrs.forEach(w => {
+            if (!wbrHistorico[w.mes]) wbrHistorico[w.mes] = [];
+            wbrHistorico[w.mes].push(w);
+        });
+        generarAcordeones();
+    });
+}
+
+function generarAcordeones() {
+    const container = document.getElementById('wbrAccordionContainer');
+    container.innerHTML = '';
+    
+    MESES.forEach(mes => {
+        const accordion = document.createElement('div');
+        accordion.className = 'accordion-month';
+        
+        const header = document.createElement('div');
+        header.className = 'accordion-month-header collapsed';
+        header.textContent = `📅 ${mes}`;
+        header.onclick = () => toggleAccordion(header);
+        
+        const content = document.createElement('div');
+        content.className = 'accordion-month-content';
+        
+        const semanasEnMes = SEMANAS_POR_MES[mes] || 4;
+        for (let semana = 1; semana <= semanasEnMes; semana++) {
+            const wbrExistente = wbrHistorico[mes]?.find(w => w.semana === semana);
+            const weekRow = generarWeekRow(mes, semana, wbrExistente);
+            content.appendChild(weekRow);
+        }
+        
+        accordion.appendChild(header);
+        accordion.appendChild(content);
+        container.appendChild(accordion);
+    });
+}
+
+function toggleAccordion(header) {
+    const content = header.nextElementSibling;
+    
+    if (header.classList.contains('collapsed')) {
+        header.classList.remove('collapsed');
+        header.classList.add('expanded');
+        content.classList.add('show');
+    } else {
+        header.classList.remove('expanded');
+        header.classList.add('collapsed');
+        content.classList.remove('show');
+    }
+}
+
+function generarWeekRow(mes, semanaDelMes, wbrExistente) {
+    // Calcular semana del año para este mes
+    const mesIndex = MESES.indexOf(mes);
+    const fechaEjemplo = new Date(2026, mesIndex, semanaDelMes * 7);
+    const semanaDelAño = getWeekOfYear(fechaEjemplo);
+    
+    const row = document.createElement('div');
+    row.className = 'week-row';
+    
+    const info = document.createElement('div');
+    info.className = 'week-info';
+    info.innerHTML = `<h4>📌 Semana ${semanaDelAño}</h4><p>${wbrExistente ? `Estado: ${wbrExistente.estado}` : 'Sin crear'}</p>`;
+    
+    const actions = document.createElement('div');
+    actions.className = 'week-actions';
+    
+    if (!wbrExistente || wbrExistente.estado === 'Abierta') {
+        const btnCrear = document.createElement('button');
+        btnCrear.className = 'btn-primary';
+        btnCrear.textContent = '✏️ Crear/Editar';
+        btnCrear.onclick = () => abrirFormularioWBR(mes, semanaDelMes);
+        actions.appendChild(btnCrear);
+    }
+    
+    if (wbrExistente && wbrExistente.estado === 'Cerrada') {
+        const btnVer = document.createElement('button');
+        btnVer.className = 'btn-info';
+        btnVer.textContent = '👁️ Ver Resumen';
+        btnVer.onclick = () => verResumenWBR(mes, semanaDelMes);
+        actions.appendChild(btnVer);
+        
+        const btnPDF = document.createElement('button');
+        btnPDF.className = 'btn-warning';
+        btnPDF.textContent = '📄 PDF';
+        btnPDF.onclick = () => descargarPDFWBR(mes, semanaDelMes);
+        actions.appendChild(btnPDF);
+    }
+    
+    row.appendChild(info);
+    row.appendChild(actions);
+    return row;
+}
+
+// =======================================
+// FORMULARIO WBR EN MODAL
+// =======================================
+
+function abrirFormularioWBR(mes, semana) {
+    wbrActualEditando = { mes, semana };
+    
+    const modal = document.getElementById('wbrFormModal');
+    document.getElementById('wbrFormTitle').textContent = `WBR - ${mes}, Semana ${semana}`;
+    
+    let html = '';
+    vendedoresData.forEach(vendedor => {
+        if (vendedor.estado === 'Activo') {
+            html += generarSeccionVendedor(vendedor, mes, semana);
+        }
+    });
+    
+    document.getElementById('wbrFormContent').innerHTML = html;
+    modal.style.display = 'block';
+    
+    vendedoresData.forEach(v => {
+        if (v.estado === 'Activo') {
+            cargarCompromisosEnForm(v.nombre, mes);
+        }
+    });
+}
+
+function generarSeccionVendedor(vendedor, mes, semana) {
+    const vid = `v_${vendedor.id}`;
+    
+    return `
+        <div style="background: #f9f9f9; padding: 20px; margin-bottom: 20px; border-radius: 8px; border-left: 4px solid #667eea;">
+            <h3>👤 ${vendedor.nombre}</h3>
+            
+            <div class="steps-container">
+                <!-- PASO 1: Compromisos CON PALOMITA Y TACHE -->
+                <div class="step">
+                    <h4><span class="step-number">1</span>Compromisos</h4>
+                    <div id="compromisos_${vid}" class="loading"><div class="spinner"></div></div>
+                    <div style="margin-top: 10px; font-size: 11px; color: #999;">
+                        ✓ = Completado | ✗ = No Completado
+                    </div>
+                </div>
+                
+                <!-- PASO 2: Descubrimientos y Retos (UN SOLO CAMPO) -->
+                <div class="step">
+                    <h4><span class="step-number">2</span>Desc. y Retos</h4>
+                    <div class="form-group">
+                        <label style="font-size: 12px;">Descubrimientos y Retos:</label>
+                        <textarea id="resumen_${vid}" placeholder="Ej: Mercado en crecimiento. Falta presupuesto. Buena comunicación." style="min-height: 100px; font-size: 12px;"></textarea>
+                    </div>
+                </div>
+                
+                <!-- PASO 3: Actividades -->
+                <div class="step">
+                    <h4><span class="step-number">3</span>Actividades</h4>
+                    <div class="form-group">
+                        <label style="font-size: 12px;">Próxima semana:</label>
+                        <textarea id="activ_${vid}" placeholder="Acciones para la próxima semana..." style="min-height: 100px; font-size: 12px;"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function cargarCompromisosEnForm(vendedorNombre, mes) {
+    llamarAppScript('obtenerCompromisosPorVendedor', { mes, vendedor: vendedorNombre }).then(compromisos => {
+        const vendedor = vendedoresData.find(v => v.nombre === vendedorNombre);
+        if (vendedor) {
+            const vid = `v_${vendedor.id}`;
+            const container = document.querySelector(`#compromisos_${vid}`);
+            
+            if (compromisos.length === 0) {
+                container.innerHTML = '<p style="color: #999; font-size: 12px;">Sin compromisos</p>';
+            } else {
+                container.innerHTML = compromisos.map(c => `
+                    <div class="compromise-item">
+                        <div style="display: flex; gap: 5px; margin-right: 8px;">
+                            <input type="radio" name="estado_${c.id}" value="completado" class="comp-estado" data-vid="${vid}" data-compromiso="${c.id}" data-estado="Completado">
+                            <span style="font-size: 11px; color: #27ae60; font-weight: bold;">✓</span>
+                        </div>
+                        <div style="display: flex; gap: 5px; margin-right: 10px;">
+                            <input type="radio" name="estado_${c.id}" value="nocompletado" class="comp-estado" data-vid="${vid}" data-compromiso="${c.id}" data-estado="No Completado">
+                            <span style="font-size: 11px; color: #e74c3c; font-weight: bold;">✗</span>
+                        </div>
+                        <label style="flex: 1; margin: 0; font-size: 13px;"><strong>${c.cliente}</strong></label>
+                    </div>
+                `).join('');
+            }
+        }
+    });
+}
+
+function guardarWBRCompleta() {
+    console.log('🔵 guardarWBRCompleta iniciada');
+    
+    if (!wbrActualEditando) {
+        console.error('❌ wbrActualEditando no definido');
+        return;
+    }
+    
+    const { mes, semana } = wbrActualEditando;
+    console.log('📅 Guardando WBR:', mes, 'Semana:', semana);
+    
+    setLoadingButton('btnGuardarWBR', true);
+    mostrarMensaje('wbrMsg', 'Guardando...', 'success');
+    
+    const promesasGuardar = [];
+    
+    vendedoresData.forEach(vendedor => {
+        if (vendedor.estado === 'Activo') {
+            const vid = `v_${vendedor.id}`;
+            console.log('👤 Procesando:', vendedor.nombre);
+            
+            const resumen = document.getElementById(`resumen_${vid}`)?.value || '';
+            const actividades = document.getElementById(`activ_${vid}`)?.value || '';
+            
+            console.log('  Resumen:', resumen.substring(0, 20) + '...');
+            console.log('  Actividades:', actividades.substring(0, 20) + '...');
+            
+            // Actualizar estado de compromisos (radio buttons: ✓ o ✗)
+            document.querySelectorAll(`.comp-estado[data-vid="${vid}"]`).forEach(radio => {
+                if (radio.checked) {
+                    const idComp = radio.getAttribute('data-compromiso');
+                    const estado = radio.getAttribute('data-estado');
+                    const completado = estado === 'Completado';
+                    
+                    console.log('  ✓ Compromiso:', idComp, '→', estado);
+                    
+                    const promesa = llamarAppScript('actualizarEstadoCompromiso', {
+                        idCompromiso: idComp,
+                        completado: completado.toString()
+                    });
+                    
+                    promesasGuardar.push(promesa);
+                }
+            });
+            
+            // Guardar resumen (Paso 2)
+            if (resumen) {
+                console.log('  📝 Guardando resumen en WBR_RESUMEN');
+                const promesa = llamarAppScript('guardarWBRResumen', {
+                    mes,
+                    semana,
+                    vendedor: vendedor.nombre,
+                    descubrimientosRetos: resumen,
+                    usuario: usuarioActual
+                });
+                promesasGuardar.push(promesa);
+            }
+            
+            // Guardar actividades (Paso 3) como acciones
+            if (actividades) {
+                console.log('  ⚡ Guardando actividades en ACCIONES');
+                const promesa = llamarAppScript('agregarAccion', {
+                    mes,
+                    semana,
+                    tipo: 'Acción WBR',
+                    vendedor: vendedor.nombre,
+                    descripcion: actividades,
+                    responsable: vendedor.nombre,
+                    fecha: new Date().toISOString().split('T')[0],
+                    usuario: usuarioActual
+                });
+                promesasGuardar.push(promesa);
+            }
+        }
+    });
+    
+    console.log('🔄 Total de promesas:', promesasGuardar.length);
+    
+    Promise.all(promesasGuardar).then(results => {
+        console.log('✅ Todas las promesas completadas:', results);
+        
+        llamarAppScript('cerrarWBR', { mes, semana }).then(response => {
+            console.log('🔒 Respuesta cerrarWBR:', response);
+            
+            setLoadingButton('btnGuardarWBR', false);
+            if (response.exito) {
+                mostrarMensaje('wbrMsg', '✅ WBR guardada correctamente', 'success');
+                setTimeout(() => {
+                    cerrarWBRForm();
+                    cargarWBRHistorico();
+                }, 1000);
+            } else {
+                mostrarMensaje('wbrMsg', '❌ Error al cerrar WBR: ' + response.mensaje, 'error');
+            }
+        }).catch(err => {
+            console.error('❌ Error en cerrarWBR:', err);
+            setLoadingButton('btnGuardarWBR', false);
+            mostrarMensaje('wbrMsg', '❌ Error: ' + err.toString(), 'error');
+        });
+    }).catch(err => {
+        console.error('❌ Error en Promise.all:', err);
+        setLoadingButton('btnGuardarWBR', false);
+        mostrarMensaje('wbrMsg', '❌ Error al guardar: ' + err.toString(), 'error');
+    });
+}
+
+function cerrarWBRForm() {
+    document.getElementById('wbrFormModal').style.display = 'none';
+}
+
+function verResumenWBR(mes, semana) {
+    mostrarMensaje('wbrMsg', 'Función en desarrollo', 'error');
+}
+
+function descargarPDFWBR(mes, semana) {
+    mostrarMensaje('wbrMsg', 'Función en desarrollo', 'error');
+}
+
+// =======================================
+// TEST SIMPLE
+// =======================================
+
+function testActualizar() {
+    const id = document.getElementById('test_id').value.trim();
+    const estado = document.getElementById('test_estado').value;
+    
+    if (!id) {
+        mostrarMensaje('testMsg', 'Ingresa un ID', 'error');
+        return;
+    }
+    
+    console.log('🧪 TEST: Actualizando', id, '→', estado);
+    
+    llamarAppScript('actualizarEstadoCompromiso', {
+        idCompromiso: id,
+        completado: (estado === 'Completado').toString()
+    }).then(response => {
+        console.log('📤 Respuesta:', response);
+        
+        if (response.exito) {
+            mostrarMensaje('testMsg', '✅ ACTUALIZADO en Sheets. Verifica COMPROMISOS columna F', 'success');
+        } else {
+            mostrarMensaje('testMsg', '❌ Error: ' + response.mensaje, 'error');
+        }
+    }).catch(err => {
+        console.error('❌ Error:', err);
+        mostrarMensaje('testMsg', '❌ Fallo: ' + err, 'error');
+    });
+}
 
 function cargarEstados() {
     const mes = document.getElementById('estados_mes').value;
+    console.log('🔵 cargarEstados: mes=' + mes);
     
     document.getElementById('estadosContent').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando...</div>';
     
     llamarAppScript('obtenerCompromisos', { mes }).then(compromisos => {
-        if (compromisos.length === 0) {
-            document.getElementById('estadosContent').innerHTML = '<p>No hay compromisos</p>';
+        console.log('📊 Compromisos recibidos:', compromisos);
+        
+        if (!compromisos || compromisos.length === 0) {
+            console.log('⚠️ Sin compromisos');
+            document.getElementById('estadosContent').innerHTML = '<p style="color: #999;">Sin compromisos para este mes</p>';
             return;
         }
+        
+        console.log('✅ Renderizando ' + compromisos.length + ' compromisos');
         
         const html = compromisos.map(c => `
             <div class="estado-item">
                 <div class="estado-label">
-                    <strong>${c.cliente} (${c.vendedor})</strong>
-                    <small>${c.clasificacion} • ID: ${c.id}</small>
+                    <strong>${c.cliente}</strong>
+                    <small>${c.vendedor} • ${c.clasificacion}</small>
                 </div>
-                <select class="estado-select" id="estado_${c.id}">
+                <select class="estado-select" id="select_${c.id}" onchange="cambiarEstado('${c.id}', this.value)">
                     <option value="Pendiente" ${c.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
-                    <option value="Completado" ${c.estado === 'Completado' ? 'selected' : ''}>Completado</option>
-                    <option value="No Completado" ${c.estado === 'No Completado' ? 'selected' : ''}>No Completado</option>
+                    <option value="Completado" ${c.estado === 'Completado' ? 'selected' : ''}>✓ Completado</option>
+                    <option value="No Completado" ${c.estado === 'No Completado' ? 'selected' : ''}>✗ No Completado</option>
                 </select>
             </div>
         `).join('');
         
         document.getElementById('estadosContent').innerHTML = html;
+        console.log('✅ Estados cargados');
+    }).catch(err => {
+        console.error('❌ Error:', err);
+        document.getElementById('estadosContent').innerHTML = '<p style="color: red;">Error al cargar: ' + err + '</p>';
     });
+}
+
+function cambiarEstado(idCompromiso, nuevoEstado) {
+    console.log('🔄 cambiarEstado:', idCompromiso, '→', nuevoEstado);
+    
+    if (!window.estadosCambiados) {
+        window.estadosCambiados = {};
+    }
+    window.estadosCambiados[idCompromiso] = nuevoEstado;
+    
+    console.log('✅ Guardado en memoria. Total cambios:', Object.keys(window.estadosCambiados).length);
 }
 
 function guardarEstados() {
-    const mes = document.getElementById('estados_mes').value;
+    console.log('💾 INICIO guardarEstados');
+    console.log('📦 estadosCambiados:', window.estadosCambiados);
     
-    llamarAppScript('obtenerCompromisos', { mes }).then(compromisos => {
-        compromisos.forEach(c => {
-            const nuevoEstado = document.getElementById('estado_' + c.id).value;
-            if (nuevoEstado !== c.estado) {
-                llamarAppScript('actualizarEstadoCompromiso', {
-                    idCompromiso: c.id,
-                    completado: nuevoEstado === 'Completado'
-                });
-            }
-        });
-        mostrarMensaje('estadosMsg', '✅ Estados guardados', 'success');
-    });
-}
-
-// =======================================
-// WBR
-// =======================================
-
-function cargarWBRHistorico() {
-    // Cargar meses disponibles para WBR
-    document.getElementById('wbrMsg').textContent = 'Cargando WBR...';
+    if (!window.estadosCambiados || Object.keys(window.estadosCambiados).length === 0) {
+        console.log('⚠️ No hay cambios para guardar');
+        mostrarMensaje('estadosMsg', 'No hay cambios para guardar', 'error');
+        return;
+    }
     
-    Promise.all(
-        MESES.map(mes => llamarAppScript('obtenerWBR', { mes }))
-    ).then(results => {
-        wbrHistorico = {};
-        MESES.forEach((mes, i) => {
-            wbrHistorico[mes] = results[i];
+    console.log('🔄 Guardando ' + Object.keys(window.estadosCambiados).length + ' cambios');
+    
+    setLoadingButton('btnGuardarEstados', true);
+    
+    const promesas = [];
+    for (const idComp in window.estadosCambiados) {
+        const nuevoEstado = window.estadosCambiados[idComp];
+        const completado = nuevoEstado === 'Completado';
+        
+        console.log('  📝 Actualizando:', idComp, '→', nuevoEstado);
+        
+        const promesa = llamarAppScript('actualizarEstadoCompromiso', {
+            idCompromiso: idComp,
+            completado: completado.toString()
         });
         
-        renderizarWBRAccordeon();
-    });
-}
-
-function renderizarWBRAccordeon() {
-    const container = document.getElementById('wbrAccordionContainer');
-    container.innerHTML = '';
+        promesas.push(promesa);
+    }
     
-    Object.keys(wbrHistorico).forEach(mes => {
-        const wbrs = wbrHistorico[mes] || [];
-        const mesDiv = document.createElement('div');
-        mesDiv.className = 'accordion-month';
+    console.log('⏳ Esperando ' + promesas.length + ' promesas...');
+    
+    Promise.all(promesas).then(resultados => {
+        console.log('✅ Respuestas:', resultados);
+        setLoadingButton('btnGuardarEstados', false);
         
-        const header = document.createElement('div');
-        header.className = 'accordion-month-header collapsed';
-        header.textContent = `${mes} (${wbrs.length} WBR)`;
-        header.onclick = function() {
-            this.classList.toggle('collapsed');
-            this.classList.toggle('expanded');
-            content.classList.toggle('show');
-        };
-        
-        const content = document.createElement('div');
-        content.className = 'accordion-month-content';
-        
-        if (wbrs.length === 0) {
-            content.innerHTML = '<p>Sin WBR registradas</p>';
+        const exitosos = resultados.filter(r => r.exito).length;
+        if (exitosos === resultados.length) {
+            console.log('🎉 ÉXITO: ' + exitosos + ' actualizados');
+            mostrarMensaje('estadosMsg', `✅ ${exitosos} compromisos actualizados`, 'success');
+            window.estadosCambiados = {};
+            cargarEstados();
         } else {
-            content.innerHTML = wbrs.map(w => `
-                <div class="week-row">
-                    <div class="week-info">
-                        <h4>Semana ${w.semana}</h4>
-                        <p>Estado: ${w.estado} • Usuario: ${w.usuario || 'N/A'}</p>
-                    </div>
-                    <div class="week-actions">
-                        <button class="btn-primary" onclick="abrirWBRFormModal('${mes}', ${w.semana})">Editar</button>
-                    </div>
-                </div>
-            `).join('');
+            console.log('⚠️ PARCIAL: ' + exitosos + '/' + resultados.length);
+            mostrarMensaje('estadosMsg', `⚠️ ${exitosos}/${resultados.length} actualizados`, 'error');
         }
-        
-        mesDiv.appendChild(header);
-        mesDiv.appendChild(content);
-        container.appendChild(mesDiv);
+    }).catch(err => {
+        console.error('❌ ERROR EN PROMISE.ALL:', err);
+        setLoadingButton('btnGuardarEstados', false);
+        mostrarMensaje('estadosMsg', '❌ Error: ' + err, 'error');
     });
 }
-
-function abrirWBRFormModal(mes, semana) {
-    wbrActualEditando = { mes, semana };
-    
-    llamarAppScript('obtenerCompromisosPorVendedor', { mes, vendedor: vendedoresData[0]?.nombre || '' }).then(compromisos => {
-        let html = `<div class="form-group inline"><div><label>Mes:</label><input type="text" value="${mes}" readonly></div><div><label>Semana:</label><input type="number" value="${semana}" readonly></div></div>`;
-        
-        if (compromisos && compromisos.length > 0) {
-            html += '<h3>Compromisos de la Semana</h3>';
-            html += compromisos.map(c => `
-                <div class="compromise-item">
-                    <input type="checkbox" id="comp_${c.id}" ${c.estado === 'Completado' ? 'checked' : ''}>
-                    <label for="comp_${c.id}">${c.cliente} (${c.clasificacion})</label>
-                </div>
-            `).join('');
-        }
-        
-        html += '<div class="form-group"><label>Descubrimientos/Retos:</label><textarea id="wbrResumen" placeholder="Notas del WBR..."></textarea></div>';
-        
-        document.getElementById('wbrFormTitle').textContent = `WBR - ${mes} Semana ${semana}`;
-        document.getElementById('wbrFormContent').innerHTML = html;
-        document.getElementById('wbrFormModal').classList.add('show');
-    });
-}
-
-function cerrarWBRForm() {
-    document.getElementById('wbrFormModal').classList.remove('show');
-}
-
-function guardarWBRCompleta() {
-    const resumen = document.getElementById('wbrResumen').value;
-    
-    llamarAppScript('guardarWBRResumen', {
-        mes: wbrActualEditando.mes,
-        semana: wbrActualEditando.semana,
-        vendedor: vendedoresData[0]?.nombre || 'N/A',
-        descubrimientosRetos: resumen,
-        usuario: usuarioActual
-    }).then(response => {
-        if (response.exito) {
-            cerrarWBRForm();
-            cargarWBRHistorico();
-            mostrarMensaje('wbrMsg', '✅ WBR guardada', 'success');
-        }
-    });
-}
-
-// =======================================
-// ACCIONES
-// =======================================
 
 function cargarAcciones() {
     const mes = document.getElementById('accion_mes').value;
-    
     llamarAppScript('obtenerAcciones', { mes }).then(acciones => {
         const tbody = document.getElementById('accionTableBody');
         tbody.innerHTML = '';
-        
         if (acciones.length === 0) {
             tbody.innerHTML = '<tr><td colspan="6">Sin acciones</td></tr>';
         } else {
             acciones.forEach(a => {
-                const row = `<tr>
-                    <td>${a.tipo}</td>
-                    <td>${a.vendedor}</td>
-                    <td>${a.descripcion}</td>
-                    <td>${a.responsable}</td>
-                    <td>${a.fecha}</td>
-                    <td><span class="badge">${a.estado}</span></td>
-                </tr>`;
+                const row = `<tr><td>${a.tipo}</td><td>${a.vendedor}</td><td>${a.descripcion}</td><td>${a.responsable}</td><td>${a.fecha}</td><td>${a.estado}</td></tr>`;
                 tbody.innerHTML += row;
             });
         }
@@ -414,59 +717,26 @@ function agregarAccion() {
     const descripcion = document.getElementById('accion_descripcion').value;
     const responsable = document.getElementById('accion_responsable').value;
     const fecha = document.getElementById('accion_fecha').value;
-    
-    if (!descripcion || !responsable || !fecha) {
+
+    if (!descripcion || !responsable) {
         mostrarMensaje('accionMsg', 'Completa todos los campos', 'error');
         return;
     }
-    
-    llamarAppScript('agregarAccion', {
-        mes, semana, tipo, vendedor, descripcion, responsable, fecha, usuario: usuarioActual
-    }).then(response => {
+
+    setLoadingButton('btnAgregarAccion', true);
+    llamarAppScript('agregarAccion', { mes, semana, tipo, vendedor, descripcion, responsable, fecha, usuario: usuarioActual }).then(response => {
+        setLoadingButton('btnAgregarAccion', false);
         if (response.exito) {
             mostrarMensaje('accionMsg', '✅ Acción creada', 'success');
             document.getElementById('accion_descripcion').value = '';
             document.getElementById('accion_responsable').value = '';
-            document.getElementById('accion_fecha').value = '';
             cargarAcciones();
         }
     });
 }
 
 // =======================================
-// TEST - ACTUALIZAR COMPROMISO
-// =======================================
-
-function testActualizar() {
-    const id = document.getElementById('test_id').value.trim();
-    const estado = document.getElementById('test_estado').value;
-    
-    if (!id) {
-        mostrarMensaje('testMsg', 'Ingresa un ID de compromiso', 'error');
-        return;
-    }
-    
-    console.log('🔄 TEST: Actualizando', id, '→', estado);
-    
-    llamarAppScript('actualizarEstadoCompromiso', {
-        idCompromiso: id,
-        completado: estado === 'Completado'
-    }).then(response => {
-        console.log('📤 Respuesta:', response);
-        
-        if (response.exito) {
-            mostrarMensaje('testMsg', '✅ ACTUALIZADO. Verifica Sheets', 'success');
-        } else {
-            mostrarMensaje('testMsg', '❌ Error: ' + response.mensaje, 'error');
-        }
-    }).catch(err => {
-        console.error('❌ Error:', err);
-        mostrarMensaje('testMsg', '❌ Fallo: ' + err, 'error');
-    });
-}
-
-// =======================================
-// TEST - DESCUBRIMIENTOS
+// TEST DESC/RETOS
 // =======================================
 
 function cargarVendedoresParaTest() {
@@ -506,7 +776,7 @@ function testDescGuardar() {
         console.log('📤 Respuesta:', response);
         
         if (response.exito) {
-            mostrarMensaje('testdescMsg', '✅ GUARDADO en WBR_RESUMEN', 'success');
+            mostrarMensaje('testdescMsg', '✅ GUARDADO en WBR_RESUMEN. Verifica Sheets', 'success');
             document.getElementById('testdesc_texto').value = '';
         } else {
             mostrarMensaje('testdescMsg', '❌ Error: ' + response.mensaje, 'error');
@@ -518,12 +788,11 @@ function testDescGuardar() {
 }
 
 // =======================================
-// TEST - ACCIONES
+// TEST ACCIONES
 // =======================================
 
 function cargarVendedoresParaTestAcciones() {
     const select = document.getElementById('testa_vendedor');
-    if (!select) return;
     select.innerHTML = '';
     
     vendedoresData.forEach(v => {
@@ -538,32 +807,36 @@ function cargarVendedoresParaTestAcciones() {
 
 function testAccionGuardar() {
     const mes = document.getElementById('testa_mes').value;
+    const semana = document.getElementById('testa_semana').value;
+    const tipo = document.getElementById('testa_tipo').value;
+    const vendedor = document.getElementById('testa_vendedor').value;
     const descripcion = document.getElementById('testa_descripcion').value.trim();
     const responsable = document.getElementById('testa_responsable').value.trim();
     const fecha = document.getElementById('testa_fecha').value;
     const estado = document.getElementById('testa_estado').value;
     
-    if (!mes || !descripcion || !responsable || !fecha) {
+    if (!mes || !semana || !tipo || !vendedor || !descripcion || !responsable || !fecha) {
         mostrarMensaje('testaMsg', '❌ Completa todos los campos', 'error');
         return;
     }
     
-    console.log('⚡ TEST ACCIÓN: Guardando acción');
+    console.log('⚡ TEST ACCIÓN: Guardando', tipo, 'para', vendedor);
     
     llamarAppScript('agregarAccion', {
         mes: mes,
-        semana: 1,
-        tipo: 'Acción',
-        vendedor: 'Coordinador',
+        semana: semana,
+        tipo: tipo,
+        vendedor: vendedor,
         descripcion: descripcion,
         responsable: responsable,
-        fecha: fecha,
+        fecha_vencimiento: fecha,
+        estado: estado,
         usuario: usuarioActual
     }).then(response => {
         console.log('📤 Respuesta:', response);
         
         if (response.exito) {
-            mostrarMensaje('testaMsg', '✅ GUARDADO en ACCIONES', 'success');
+            mostrarMensaje('testaMsg', '✅ GUARDADO en ACCIONES. Verifica Sheets', 'success');
             document.getElementById('testa_descripcion').value = '';
             document.getElementById('testa_responsable').value = '';
             document.getElementById('testa_fecha').value = '';
@@ -575,6 +848,42 @@ function testAccionGuardar() {
         mostrarMensaje('testaMsg', '❌ Fallo: ' + err, 'error');
     });
 }
+
+// =======================================
+// TEST ACTUALIZAR ACCIÓN
+// =======================================
+
+function testAccActualizar() {
+    const id = document.getElementById('testacc_id').value.trim();
+    const estado = document.getElementById('testacc_estado').value;
+    
+    if (!id) {
+        mostrarMensaje('testaccMsg', '❌ Ingresa un ID de acción', 'error');
+        return;
+    }
+    
+    console.log('🔄 TEST ACCIÓN: Actualizando', id, '→', estado);
+    
+    llamarAppScript('actualizarEstadoAccion', {
+        idAccion: id,
+        estado: estado
+    }).then(response => {
+        console.log('📤 Respuesta:', response);
+        
+        if (response.exito) {
+            mostrarMensaje('testaccMsg', '✅ ACTUALIZADO en ACCIONES. Verifica Sheets columna Estado', 'success');
+        } else {
+            mostrarMensaje('testaccMsg', '❌ Error: ' + response.mensaje, 'error');
+        }
+    }).catch(err => {
+        console.error('❌ Error:', err);
+        mostrarMensaje('testaccMsg', '❌ Fallo: ' + err, 'error');
+    });
+}
+
+// =======================================
+// CARGAR Y ACTUALIZAR ACCIONES EN TEST
+// =======================================
 
 function cargarAccionesTest() {
     const mes = document.getElementById('listacc_mes').value;
@@ -599,7 +908,8 @@ function cargarAccionesTest() {
                         </small>
                     </div>
                     <div style="text-align: right; font-size: 12px; color: #999;">
-                        ID: ${a.id}
+                        ID: ${a.id}<br>
+                        Vence: ${a.fecha_vencimiento}
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center;">
@@ -643,150 +953,5 @@ function actualizarAccionTest(idAccion) {
     }).catch(err => {
         console.error('❌ Error:', err);
         mostrarMensaje('testaMsg', '❌ Fallo: ' + err, 'error');
-    });
-}
-
-// =======================================
-// MODAL - ACCIONES
-// =======================================
-
-let accionVendedorActual = null;
-
-function abrirModalAccion(vendedorId, vendedorNombre) {
-    accionVendedorActual = { id: vendedorId, nombre: vendedorNombre };
-    document.getElementById('accion_vendedor').value = vendedorNombre;
-    document.getElementById('accion_tipo').value = '';
-    document.getElementById('accion_tipo_otra').style.display = 'none';
-    document.getElementById('accion_tipo_otra').value = '';
-    document.getElementById('accion_descripcion').value = '';
-    document.getElementById('accion_responsable').value = '';
-    document.getElementById('accion_fecha').value = '';
-    document.getElementById('accion_vencimiento').value = '';
-    document.getElementById('modalAccion').classList.add('show');
-}
-
-function cerrarModalAccion() {
-    document.getElementById('modalAccion').classList.remove('show');
-    accionVendedorActual = null;
-}
-
-function mostrarInputOtra() {
-    const tipo = document.getElementById('accion_tipo').value;
-    const inputOtra = document.getElementById('accion_tipo_otra');
-    if (tipo === 'Otra') {
-        inputOtra.style.display = 'block';
-        inputOtra.focus();
-    } else {
-        inputOtra.style.display = 'none';
-        inputOtra.value = '';
-    }
-}
-
-function guardarAccion() {
-    if (!accionVendedorActual) {
-        mostrarMensaje('', 'Error: vendedor no seleccionado', 'error');
-        return;
-    }
-
-    const fecha = document.getElementById('accion_fecha').value;
-    const tipo = document.getElementById('accion_tipo').value;
-    const tipoOtra = document.getElementById('accion_tipo_otra').value;
-    const tipoFinal = tipo === 'Otra' ? tipoOtra : tipo;
-    const descripcion = document.getElementById('accion_descripcion').value;
-    const responsable = document.getElementById('accion_responsable').value;
-    const vencimiento = document.getElementById('accion_vencimiento').value;
-
-    if (!fecha || !tipoFinal || !descripcion || !responsable || !vencimiento) {
-        mostrarMensaje('', 'Completa todos los campos', 'error');
-        return;
-    }
-
-    // Extraer mes y semana de la fecha
-    const dateObj = new Date(fecha);
-    const mesIndex = dateObj.getMonth();
-    const mes = MESES[mesIndex];
-    const semana = getWeekOfYear(dateObj);
-
-    llamarAppScript('crearAccion', {
-        mes,
-        semana,
-        tipo: tipoFinal,
-        vendedor: accionVendedorActual.nombre,
-        descripcion,
-        responsable,
-        fecha_vencimiento: vencimiento,
-        usuario: usuarioActual
-    }).then(response => {
-        if (response.exito) {
-            mostrarMensaje('', '✅ Acción creada', 'success');
-            cerrarModalAccion();
-            // Recargar acciones del vendedor
-            cargarAccionesVendedorWBR(wbrActualSesion.mes, accionVendedorActual.id);
-        } else {
-            mostrarMensaje('', '❌ Error: ' + response.mensaje, 'error');
-        }
-    });
-}
-
-// =======================================
-// WBR - CARGAR VENDEDORES CON 3 PASOS
-// =======================================
-
-function cargarVendedoresParaWBR(mes, semana) {
-    const container = document.getElementById('wbr-vendedores-container');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    const vendedoresActivos = vendedoresData.filter(v => v.estado === 'Activo');
-    
-    vendedoresActivos.forEach(vendedor => {
-        const vendedorDiv = document.createElement('div');
-        vendedorDiv.className = 'wbr-vendedor';
-        vendedorDiv.setAttribute('data-vendedor-id', vendedor.id);
-        vendedorDiv.innerHTML = `
-            <div class="wbr-vendedor-header" onclick="toggleVendedor(this)">
-                <div class="wbr-vendedor-info">
-                    <div class="wbr-vendedor-nombre">${vendedor.nombre}</div>
-                    <div class="wbr-vendedor-status en-edicion">⚙️ En edición</div>
-                </div>
-                <div class="wbr-vendedor-toggle">▼</div>
-            </div>
-            <div class="wbr-vendedor-content">
-                <div class="wbr-paso"><div class="wbr-paso-titulo">Paso 1: Compromisos</div><div id="wbr-compromisos-${vendedor.id}"><div class="loading"><div class="spinner"></div></div></div></div>
-                <div class="wbr-paso"><div class="wbr-paso-titulo">Paso 2: Descubrimientos/Retos</div><textarea id="wbr-descubrimientos-${vendedor.id}" placeholder="¿Qué descubrieron?" style="width: 100%; min-height: 100px; padding: 10px; border: 1px solid #bdc3c7; border-radius: 5px;"></textarea></div>
-                <div class="wbr-paso"><div class="wbr-paso-titulo">Paso 3: Acciones</div><button class="btn-primary" style="margin-bottom: 15px;" onclick="abrirModalAccion('${vendedor.id}', '${vendedor.nombre}')">➕ Agregar Acción</button><div id="wbr-acciones-${vendedor.id}"><div class="loading"><div class="spinner"></div></div></div></div>
-                <div style="margin-top: 20px; display: flex; gap: 10px;">
-                    <button class="btn-success" onclick="guardarVendedorWBR('${vendedor.id}', '${vendedor.nombre}')">Guardar</button>
-                    <button class="btn-primary" onclick="cancelarVendedorWBR('${vendedor.id}')">Cancelar</button>
-                </div>
-            </div>
-        `;
-        container.appendChild(vendedorDiv);
-        cargarCompromisosVendedorWBR(mes, vendedor.nombre, vendedor.id);
-        cargarAccionesVendedorWBR(mes, vendedor.id);
-    });
-}
-
-function cargarAccionesVendedorWBR(mes, vendedorId) {
-    llamarAppScript('obtenerAcciones', { mes }).then(acciones => {
-        const container = document.getElementById(`wbr-acciones-${vendedorId}`);
-        if (!container) return;
-        
-        // Filtrar solo acciones NO completadas
-        const accionesActivas = acciones.filter(a => a.estado !== 'COMPLETADO');
-        
-        if (accionesActivas.length === 0) {
-            container.innerHTML = '<p style="color: #999;">Sin acciones pendientes</p>';
-            return;
-        }
-
-        let html = '<table style="width: 100%; border-collapse: collapse;"><thead><tr style="background: #667eea; color: white;"><th style="padding: 8px; text-align: left;">Tipo</th><th style="padding: 8px; text-align: left;">Descripción</th><th style="padding: 8px; text-align: left;">Vencimiento</th><th style="padding: 8px; text-align: left;">Responsable</th></tr></thead><tbody>';
-        
-        accionesActivas.forEach(a => {
-            html += `<tr style="border-bottom: 1px solid #ecf0f1;"><td style="padding: 8px;">${a.tipo}</td><td style="padding: 8px;">${a.descripcion}</td><td style="padding: 8px;">${a.fecha_vencimiento}</td><td style="padding: 8px;">${a.responsable}</td></tr>`;
-        });
-
-        html += '</tbody></table>';
-        container.innerHTML = html;
     });
 }
