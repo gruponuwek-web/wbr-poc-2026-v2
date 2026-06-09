@@ -259,6 +259,7 @@ function cargarCompromisosWBR(mes, vendedor, vendedorId) {
                 <div class="compromiso-nombre">${c.cliente} - ${c.clasificacion}</div>
                 <select class="compromiso-dropdown ${(c.estado || 'Pendiente').toLowerCase().replace(' ', '-')}" 
                         data-id="${c.id}" 
+                        data-vendedor-id="${vendedorId}"
                         onchange="toggleCompromiso('${c.id}', this)">
                     <option value="Pendiente" ${c.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
                     <option value="Completado" ${c.estado === 'Completado' ? 'selected' : ''}>Completado</option>
@@ -374,42 +375,105 @@ function guardarAccion() {
 }
 
 function guardarVendedorWBR(vendedorId, vendedorNombre, mes, semana) {
-    // 1. RECOPILAR ESTADOS DE COMPROMISOS (PASO 1)
-    const paso1Selects = document.querySelectorAll(`[data-vendedor-id="${vendedorId}"] .compromiso-dropdown`);
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🔵 PASO 1: FUNCIÓN EJECUTADA');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('vendedorId:', vendedorId);
+    console.log('vendedorNombre:', vendedorNombre);
+    console.log('mes:', mes);
+    console.log('semana:', semana);
+    
+    // PASO 2: RECOPILAR ESTADOS
+    console.log('');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🔵 PASO 2: BUSCANDO DROPDOWNS');
+    console.log('═══════════════════════════════════════════════════════');
+    
+    const dropdowns = document.querySelectorAll(`[data-vendedor-id="${vendedorId}"] .compromiso-dropdown`);
+    console.log('✅ Dropdowns encontrados:', dropdowns.length);
+    
     const estadosCompromisos = [];
-    paso1Selects.forEach(select => {
-        estadosCompromisos.push({
-            id: select.getAttribute('data-id'),
-            estado: select.value
-        });
+    dropdowns.forEach((dd, index) => {
+        const id = dd.getAttribute('data-id');
+        const estado = dd.value;
+        console.log(`  Dropdown ${index}: id="${id}", estado="${estado}"`);
+        estadosCompromisos.push({ id: id, estado: estado });
     });
     
-    // 2. RECOPILAR DESCUBRIMIENTOS (PASO 2)
-    const descubrimientos = document.getElementById('paso2-' + vendedorId).value;
+    // PASO 3: RECOPILAR DESCUBRIMIENTOS
+    console.log('');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🔵 PASO 3: BUSCANDO TEXTAREA');
+    console.log('═══════════════════════════════════════════════════════');
     
-    // 3. RECOPILAR ACCIONES (PASO 3) - desde tabla
+    const textareaId = `paso2-${vendedorId}`;
+    const textarea = document.getElementById(textareaId);
+    const descubrimientos = textarea ? textarea.value : '';
+    
+    console.log('✅ Textarea encontrado:', !!textarea);
+    console.log('✅ ID del textarea:', textareaId);
+    console.log('✅ Contenido:', descubrimientos);
+    
+    // PASO 4: RECOPILAR ACCIONES
+    console.log('');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🔵 PASO 4: BUSCANDO TABLA DE ACCIONES');
+    console.log('═══════════════════════════════════════════════════════');
+    
     const paso3Table = document.querySelector(`[data-vendedor-id="${vendedorId}"] .wbr-tabla tbody`);
     const acciones = [];
+    
     if (paso3Table) {
-        paso3Table.querySelectorAll('tr').forEach(row => {
-            acciones.push({
+        console.log('✅ Tabla encontrada');
+        paso3Table.querySelectorAll('tr').forEach((row, idx) => {
+            const accion = {
                 tipo: row.cells[0]?.textContent,
                 descripcion: row.cells[1]?.textContent,
                 vencimiento: row.cells[2]?.textContent,
                 responsable: row.cells[3]?.textContent
-            });
+            };
+            console.log(`  Acción ${idx}:`, accion);
+            acciones.push(accion);
         });
+    } else {
+        console.log('⚠️ Tabla NO encontrada');
     }
     
-    // 4. ENVIAR TODO A APPSCRIPT
-    llamarAppScript('guardarWBRCompleto', {
-        mes, semana, vendedor: vendedorNombre,
+    // PASO 5: ENVIAR A APPSCRIPT
+    console.log('');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🔵 PASO 5: ENVIANDO A APPSCRIPT');
+    console.log('═══════════════════════════════════════════════════════');
+    
+    const datosAEnviar = {
+        mes: mes,
+        semana: semana,
+        vendedor: vendedorNombre,
         estadosCompromisos: JSON.stringify(estadosCompromisos),
         descubrimientos: descubrimientos,
         acciones: JSON.stringify(acciones),
         usuario: usuarioActual
-    }).then(response => {
+    };
+    
+    console.log('📤 Datos a enviar:');
+    console.log('  mes:', datosAEnviar.mes);
+    console.log('  semana:', datosAEnviar.semana);
+    console.log('  vendedor:', datosAEnviar.vendedor);
+    console.log('  estadosCompromisos:', datosAEnviar.estadosCompromisos);
+    console.log('  descubrimientos:', datosAEnviar.descubrimientos);
+    console.log('  acciones:', datosAEnviar.acciones);
+    console.log('  usuario:', datosAEnviar.usuario);
+    
+    llamarAppScript('guardarWBRCompleto', datosAEnviar).then(response => {
+        console.log('');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('🔵 PASO 6: RESPUESTA DE APPSCRIPT');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('response:', response);
+        
         if (response.exito) {
+            console.log('✅ ✅ ✅ GUARDADO EXITOSO ✅ ✅ ✅');
+            
             // Cambiar header a "Guardado"
             const header = document.querySelector(`[data-vendedor-id="${vendedorId}"] .wbr-vendedor-header`);
             header.innerHTML = `
@@ -425,7 +489,17 @@ function guardarVendedorWBR(vendedorId, vendedorNombre, mes, semana) {
             content.classList.remove('show');
             
             alert('Vendedor guardado ✅');
+        } else {
+            console.log('❌ ❌ ❌ ERROR ❌ ❌ ❌');
+            console.log('Mensaje:', response.mensaje);
+            alert('❌ Error: ' + response.mensaje);
         }
+    }).catch(error => {
+        console.log('');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('🔴 PASO 7: ERROR EN LLAMADA');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('error:', error);
     });
 }
 
