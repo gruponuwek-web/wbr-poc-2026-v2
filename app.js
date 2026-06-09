@@ -50,11 +50,6 @@ function showSection(sectionId) {
     document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
     event.target.classList.add('active');
 
-    // Cargar compromisos cuando se abre la sección
-    if (sectionId === 'compromisos') {
-        cargarCompromisos();
-    }
-
     if (sectionId === 'wbr') {
         cargarWBRHistorico();
     }
@@ -110,49 +105,36 @@ function loadDashboard() {
         // Contar totales
         const totalCompromisos = compromisos.length;
         const realizados = compromisos.filter(c => c.estado === 'Completado').length;
-        const porcentajeTotalCompletados = totalCompromisos > 0 ? Math.round((realizados / totalCompromisos) * 100) : 0;
         
-        // Contar por clasificación REAL: Prospección, Crecimiento, Recuperado
-        const clasificacionProspeccion = compromisos.filter(c => c.clasificacion === 'Prospección');
-        const completadosProspeccion = clasificacionProspeccion.filter(c => c.estado === 'Completado').length;
-        const porcentajeProspeccion = clasificacionProspeccion.length > 0 ? Math.round((completadosProspeccion / clasificacionProspeccion.length) * 100) : 0;
-        
-        const clasificacionCrecimiento = compromisos.filter(c => c.clasificacion === 'Crecimiento');
-        const completadosCrecimiento = clasificacionCrecimiento.filter(c => c.estado === 'Completado').length;
-        const porcentajeCrecimiento = clasificacionCrecimiento.length > 0 ? Math.round((completadosCrecimiento / clasificacionCrecimiento.length) * 100) : 0;
-        
-        const clasificacionRecuperado = compromisos.filter(c => c.clasificacion === 'Recuperado');
-        const completadosRecuperado = clasificacionRecuperado.filter(c => c.estado === 'Completado').length;
-        const porcentajeRecuperado = clasificacionRecuperado.length > 0 ? Math.round((completadosRecuperado / clasificacionRecuperado.length) * 100) : 0;
+        // Contar por clasificación
+        const clasificacionA = compromisos.filter(c => c.clasificacion === 'A').length;
+        const clasificacionB = compromisos.filter(c => c.clasificacion === 'B').length;
+        const clasificacionC = compromisos.filter(c => c.clasificacion === 'C').length;
         
         // Generar HTML de métricas
         const html = `
             <div class="metric-card">
-                <h3>Compromisos Total</h3>
+                <h3>Compromisos</h3>
                 <div class="metric-number">${realizados}/${totalCompromisos}</div>
-                <div class="metric-subtitle">${mesActual}</div>
-                <div class="metric-percentage">${porcentajeTotalCompletados}%</div>
+                <div class="metric-subtitle">Realizados / Totales (${mesActual})</div>
             </div>
             
             <div class="metric-card clasificacion-a">
-                <h3>Prospección</h3>
-                <div class="metric-number">${completadosProspeccion}/${clasificacionProspeccion.length}</div>
-                <div class="metric-subtitle">Completados / Totales</div>
-                <div class="metric-percentage">${porcentajeProspeccion}%</div>
+                <h3>Clasificación A</h3>
+                <div class="metric-number">${clasificacionA}</div>
+                <div class="metric-subtitle">Críticos</div>
             </div>
             
             <div class="metric-card clasificacion-b">
-                <h3>Crecimiento</h3>
-                <div class="metric-number">${completadosCrecimiento}/${clasificacionCrecimiento.length}</div>
-                <div class="metric-subtitle">Completados / Totales</div>
-                <div class="metric-percentage">${porcentajeCrecimiento}%</div>
+                <h3>Clasificación B</h3>
+                <div class="metric-number">${clasificacionB}</div>
+                <div class="metric-subtitle">Importantes</div>
             </div>
             
             <div class="metric-card clasificacion-c">
-                <h3>Recuperado</h3>
-                <div class="metric-number">${completadosRecuperado}/${clasificacionRecuperado.length}</div>
-                <div class="metric-subtitle">Completados / Totales</div>
-                <div class="metric-percentage">${porcentajeRecuperado}%</div>
+                <h3>Clasificación C</h3>
+                <div class="metric-number">${clasificacionC}</div>
+                <div class="metric-subtitle">Regulares</div>
             </div>
         `;
         
@@ -239,22 +221,13 @@ function pausarVendedor(id) {
 
 function cargarCompromisos() {
     const mes = document.getElementById('compromiso_mes').value;
-    const filtroEstado = document.getElementById('compromiso_filtro_estado').value;
-    
     llamarAppScript('obtenerCompromisos', { mes }).then(compromisos => {
-        // Filtrar por estado si no es "Todos"
-        let compromisosFiltrados = compromisos;
-        if (filtroEstado !== 'Todos') {
-            compromisosFiltrados = compromisos.filter(c => c.estado === filtroEstado);
-        }
-        
         const tbody = document.getElementById('compromiso_tabla');
         tbody.innerHTML = '';
-        
-        if (compromisosFiltrados.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6">Sin compromisos</td></tr>';
+        if (compromisos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5">Sin compromisos</td></tr>';
         } else {
-            compromisosFiltrados.forEach(c => {
+            compromisos.forEach(c => {
                 const row = `<tr><td>${c.id.substring(0, 8)}...</td><td>${c.mes}</td><td>${c.vendedor}</td><td>${c.cliente}</td><td>${c.clasificacion}</td><td>${c.estado}</td></tr>`;
                 tbody.innerHTML += row;
             });
@@ -342,109 +315,269 @@ function guardarEstados() {
 // WBR
 // =======================================
 
-function cargarWBRHistorico() {
-    // Cargar meses disponibles para WBR
-    document.getElementById('wbrMsg').textContent = 'Cargando WBR...';
-    
-    Promise.all(
-        MESES.map(mes => llamarAppScript('obtenerWBR', { mes }))
-    ).then(results => {
-        wbrHistorico = {};
-        MESES.forEach((mes, i) => {
-            wbrHistorico[mes] = results[i];
-        });
-        
-        renderizarWBRAccordeon();
-    });
+let wbrActualEditando = null;
+let wbrActualSesion = null;
+
+function mostrarTab(tabName) {
+    // Cambiar contenido visible
+    document.getElementById('contenido-nueva-sesion').style.display = 
+        tabName === 'nueva-sesion' ? 'block' : 'none';
+    document.getElementById('contenido-historial').style.display = 
+        tabName === 'historial' ? 'block' : 'none';
+
+    // Actualizar tabs activos
+    document.getElementById('tab-nueva-sesion').classList.toggle('active', tabName === 'nueva-sesion');
+    document.getElementById('tab-historial').classList.toggle('active', tabName === 'historial');
+
+    // Si es historial, cargar datos
+    if (tabName === 'historial') {
+        cargarHistorialWBR();
+    }
 }
 
-function renderizarWBRAccordeon() {
-    const container = document.getElementById('wbrAccordionContainer');
-    container.innerHTML = '';
-    
-    Object.keys(wbrHistorico).forEach(mes => {
-        const wbrs = wbrHistorico[mes] || [];
-        const mesDiv = document.createElement('div');
-        mesDiv.className = 'accordion-month';
-        
-        const header = document.createElement('div');
-        header.className = 'accordion-month-header collapsed';
-        header.textContent = `${mes} (${wbrs.length} WBR)`;
-        header.onclick = function() {
-            this.classList.toggle('collapsed');
-            this.classList.toggle('expanded');
-            content.classList.toggle('show');
-        };
-        
-        const content = document.createElement('div');
-        content.className = 'accordion-month-content';
-        
-        if (wbrs.length === 0) {
-            content.innerHTML = '<p>Sin WBR registradas</p>';
-        } else {
-            content.innerHTML = wbrs.map(w => `
-                <div class="week-row">
-                    <div class="week-info">
-                        <h4>Semana ${w.semana}</h4>
-                        <p>Estado: ${w.estado} • Usuario: ${w.usuario || 'N/A'}</p>
-                    </div>
-                    <div class="week-actions">
-                        <button class="btn-primary" onclick="abrirWBRFormModal('${mes}', ${w.semana})">Editar</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        mesDiv.appendChild(header);
-        mesDiv.appendChild(content);
-        container.appendChild(mesDiv);
-    });
-}
+function crearNuevaWBR() {
+    // Obtener mes y semana actuales
+    const now = new Date();
+    const mesActual = MESES[now.getMonth()];
+    const semanaActual = getWeekOfYear(now);
 
-function abrirWBRFormModal(mes, semana) {
-    wbrActualEditando = { mes, semana };
-    
-    llamarAppScript('obtenerCompromisosPorVendedor', { mes, vendedor: vendedoresData[0]?.nombre || '' }).then(compromisos => {
-        let html = `<div class="form-group inline"><div><label>Mes:</label><input type="text" value="${mes}" readonly></div><div><label>Semana:</label><input type="number" value="${semana}" readonly></div></div>`;
-        
-        if (compromisos && compromisos.length > 0) {
-            html += '<h3>Compromisos de la Semana</h3>';
-            html += compromisos.map(c => `
-                <div class="compromise-item">
-                    <input type="checkbox" id="comp_${c.id}" ${c.estado === 'Completado' ? 'checked' : ''}>
-                    <label for="comp_${c.id}">${c.cliente} (${c.clasificacion})</label>
-                </div>
-            `).join('');
-        }
-        
-        html += '<div class="form-group"><label>Descubrimientos/Retos:</label><textarea id="wbrResumen" placeholder="Notas del WBR..."></textarea></div>';
-        
-        document.getElementById('wbrFormTitle').textContent = `WBR - ${mes} Semana ${semana}`;
-        document.getElementById('wbrFormContent').innerHTML = html;
-        document.getElementById('wbrFormModal').classList.add('show');
-    });
-}
+    // Actualizar display
+    document.getElementById('wbr-mes-display').textContent = mesActual;
+    document.getElementById('wbr-semana-display').textContent = `# Semana ${semanaActual} de 52`;
+    document.getElementById('wbr-titulo-sesion').textContent = `WBR - ${mesActual} Semana ${semanaActual}`;
 
-function cerrarWBRForm() {
-    document.getElementById('wbrFormModal').classList.remove('show');
-}
+    // Mostrar botón cerrar sesión
+    document.getElementById('btn-cerrar-wbr').style.display = 'inline-block';
+    document.getElementById('btn-crear-wbr').style.display = 'none';
 
-function guardarWBRCompleta() {
-    const resumen = document.getElementById('wbrResumen').value;
-    
-    llamarAppScript('guardarWBRResumen', {
-        mes: wbrActualEditando.mes,
-        semana: wbrActualEditando.semana,
-        vendedor: vendedoresData[0]?.nombre || 'N/A',
-        descubrimientosRetos: resumen,
-        usuario: usuarioActual
-    }).then(response => {
+    // Guardar sesión actual
+    wbrActualSesion = { mes: mesActual, semana: semanaActual };
+
+    // Cargar vendedores
+    llamarAppScript('abrirWBR', { mes: mesActual, semana: semanaActual, usuario: usuarioActual }).then(response => {
         if (response.exito) {
-            cerrarWBRForm();
-            cargarWBRHistorico();
-            mostrarMensaje('wbrMsg', '✅ WBR guardada', 'success');
+            cargarVendedoresParaWBR(mesActual, semanaActual);
         }
     });
+
+    // Cambiar a tab "Nueva sesión"
+    mostrarTab('nueva-sesion');
+}
+
+function cargarVendedoresParaWBR(mes, semana) {
+    const container = document.getElementById('wbr-vendedores-container');
+    container.innerHTML = '';
+
+    // Cargar vendedores activos
+    vendedoresData.filter(v => v.estado === 'Activo').forEach(vendedor => {
+        const vendedorDiv = document.createElement('div');
+        vendedorDiv.className = 'wbr-vendedor';
+        vendedorDiv.innerHTML = `
+            <div class="wbr-vendedor-header" onclick="toggleVendedor(this)">
+                <div class="wbr-vendedor-info">
+                    <div class="wbr-vendedor-nombre">${vendedor.nombre}</div>
+                    <div class="wbr-vendedor-status en-edicion">⚙️ En edición</div>
+                </div>
+                <div class="wbr-vendedor-toggle">▼</div>
+            </div>
+            <div class="wbr-vendedor-content">
+                <!-- PASO 1: COMPROMISOS -->
+                <div class="wbr-paso">
+                    <div class="wbr-paso-titulo">Paso 1: Compromisos</div>
+                    <div id="wbr-compromisos-${vendedor.id}" class="wbr-compromisos-list">
+                        <div class="loading"><div class="spinner"></div>Cargando compromisos...</div>
+                    </div>
+                </div>
+
+                <!-- PASO 2: DESCUBRIMIENTOS/RETOS -->
+                <div class="wbr-paso">
+                    <div class="wbr-paso-titulo">Paso 2: Descubrimientos/Retos</div>
+                    <textarea id="wbr-descubrimientos-${vendedor.id}" placeholder="¿Qué descubrieron? ¿Qué retos encontraron?" style="width: 100%; min-height: 100px; padding: 10px; border: 1px solid #bdc3c7; border-radius: 5px;"></textarea>
+                </div>
+
+                <!-- PASO 3: ACCIONES -->
+                <div class="wbr-paso">
+                    <div class="wbr-paso-titulo">Paso 3: Acciones</div>
+                    <div id="wbr-acciones-${vendedor.id}" class="wbr-acciones-list">
+                        <div class="loading"><div class="spinner"></div>Cargando acciones...</div>
+                    </div>
+                </div>
+
+                <!-- BOTONES -->
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button class="btn-success" onclick="guardarVendedorWBR('${vendedor.id}', '${vendedor.nombre}')">Guardar</button>
+                    <button class="btn-primary" onclick="cancelarVendedorWBR('${vendedor.id}')">Cancelar</button>
+                </div>
+            </div>
+        `;
+        container.appendChild(vendedorDiv);
+
+        // Cargar datos para este vendedor
+        cargarCompromisosVendedorWBR(mes, vendedor.nombre, vendedor.id);
+        cargarAccionesVendedorWBR(mes, vendedor.id);
+    });
+}
+
+function cargarCompromisosVendedorWBR(mes, vendedor, vendedorId) {
+    llamarAppScript('obtenerCompromisosPorVendedor', { mes, vendedor }).then(compromisos => {
+        const container = document.getElementById(`wbr-compromisos-${vendedorId}`);
+        
+        // Filtrar solo no completados
+        const noCompletados = compromisos.filter(c => c.estado !== 'Completado');
+
+        if (noCompletados.length === 0) {
+            container.innerHTML = '<p style="color: #999;">Todos los compromisos están completados</p>';
+            return;
+        }
+
+        let html = '';
+        noCompletados.forEach(c => {
+            html += `
+                <div class="compromise-item">
+                    <input type="checkbox" class="wbr-checkbox-compromiso" data-id="${c.id}" data-vendedor="${vendedorId}">
+                    <label>${c.cliente} (${c.clasificacion})</label>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    });
+}
+
+function cargarAccionesVendedorWBR(mes, vendedorId) {
+    llamarAppScript('obtenerAcciones', { mes }).then(acciones => {
+        const container = document.getElementById(`wbr-acciones-${vendedorId}`);
+        
+        if (acciones.length === 0) {
+            container.innerHTML = '<p style="color: #999;">Sin acciones asignadas</p>';
+            return;
+        }
+
+        let html = '<table style="width: 100%; border-collapse: collapse;"><thead><tr style="background: #667eea; color: white;"><th style="padding: 8px; text-align: left;">Descripción</th><th style="padding: 8px; text-align: left;">Responsable</th><th style="padding: 8px; text-align: left;">Vencimiento</th></tr></thead><tbody>';
+        
+        acciones.forEach(a => {
+            html += `
+                <tr style="border-bottom: 1px solid #ecf0f1;">
+                    <td style="padding: 8px;">${a.descripcion}</td>
+                    <td style="padding: 8px;">${a.responsable}</td>
+                    <td style="padding: 8px;">${a.fecha}</td>
+                </tr>
+            `;
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    });
+}
+
+function toggleVendedor(header) {
+    const content = header.nextElementSibling;
+    const isActive = header.classList.contains('active');
+
+    // Cerrar otros abiertos
+    document.querySelectorAll('.wbr-vendedor-header.active').forEach(h => {
+        if (h !== header) {
+            h.classList.remove('active');
+            h.nextElementSibling.classList.remove('active');
+        }
+    });
+
+    // Toggle actual
+    header.classList.toggle('active');
+    content.classList.toggle('active');
+}
+
+function guardarVendedorWBR(vendedorId, vendedorNombre) {
+    const descubrimientos = document.getElementById(`wbr-descubrimientos-${vendedorId}`).value;
+
+    // Guardar descubrimientos
+    if (wbrActualSesion) {
+        llamarAppScript('guardarWBRResumen', {
+            mes: wbrActualSesion.mes,
+            semana: wbrActualSesion.semana,
+            vendedor: vendedorNombre,
+            descubrimientosRetos: descubrimientos,
+            usuario: usuarioActual
+        }).then(response => {
+            if (response.exito) {
+                // Cambiar status a guardado
+                const vendedorDiv = document.querySelector(`[data-vendedor-id="${vendedorId}"]`);
+                const status = vendedorDiv.querySelector('.wbr-vendedor-status');
+                status.textContent = '✅ Guardado';
+                status.classList.remove('en-edicion');
+                status.classList.add('guardado');
+
+                mostrarMensaje('', '✅ Vendedor guardado', 'success');
+            }
+        });
+    }
+}
+
+function cancelarVendedorWBR(vendedorId) {
+    const header = document.querySelector(`.wbr-vendedor-header[onclick*="${vendedorId}"]`).parentElement.querySelector('.wbr-vendedor-header');
+    header.classList.remove('active');
+    header.nextElementSibling.classList.remove('active');
+}
+
+function cerrarWBR() {
+    if (wbrActualSesion) {
+        llamarAppScript('cerrarWBR', {
+            mes: wbrActualSesion.mes,
+            semana: wbrActualSesion.semana
+        }).then(response => {
+            if (response.exito) {
+                mostrarMensaje('', '✅ Sesión cerrada. PDF listo para descargar.', 'success');
+                document.getElementById('btn-cerrar-wbr').style.display = 'none';
+                document.getElementById('btn-crear-wbr').style.display = 'inline-block';
+                wbrActualSesion = null;
+                cargarHistorialWBR();
+                mostrarTab('historial');
+            }
+        });
+    }
+}
+
+function cargarHistorialWBR() {
+    const container = document.getElementById('wbr-historial-list');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div>Cargando historial...</div>';
+
+    // Cargar todas las sesiones WBR
+    Promise.all(MESES.map(mes => llamarAppScript('obtenerWBR', { mes }))).then(results => {
+        let html = '';
+        let count = 0;
+
+        MESES.forEach((mes, index) => {
+            const wbrs = results[index] || [];
+            wbrs.forEach(w => {
+                html += `
+                    <div class="wbr-historial-item" onclick="abrirResumenWBR('${mes}', ${w.semana})">
+                        <div class="wbr-historial-info">
+                            <div class="wbr-historial-titulo">${mes} Semana ${w.semana}</div>
+                            <div class="wbr-historial-fecha">Cerrada: ${w.fecha_cierre || 'N/A'}</div>
+                        </div>
+                        <div class="wbr-historial-estado">✅ Cerrada</div>
+                    </div>
+                `;
+                count++;
+            });
+        });
+
+        if (count === 0) {
+            html = '<p style="color: #999; text-align: center; padding: 20px;">Sin sesiones WBR registradas</p>';
+        }
+
+        container.innerHTML = html;
+    });
+}
+
+function abrirResumenWBR(mes, semana) {
+    // TODO: Abrir resumen de la sesión (implementar después)
+    mostrarMensaje('', `Abriendo resumen de ${mes} Semana ${semana}...`, 'success');
+}
+
+function cargarWBRHistorico() {
+    // Compatibilidad con código anterior
+    cargarHistorialWBR();
 }
 
 // =======================================
