@@ -490,7 +490,7 @@ function renderizarVista(vista, acciones) {
     
     // Mostrar vista seleccionada
     document.getElementById('vista-' + vista).classList.add('active');
-    event.target.classList.add('active');
+    document.querySelector('.acciones-tab[data-vista="' + vista + '"]').classList.add('active');
     
     if (vista === 'semanal') {
         renderizarVistaSemanal(acciones);
