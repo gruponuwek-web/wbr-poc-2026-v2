@@ -315,7 +315,6 @@ function guardarEstados() {
 // WBR
 // =======================================
 
-let wbrActualEditando = null;
 let wbrActualSesion = null;
 
 function mostrarTab(tabName) {
@@ -527,6 +526,8 @@ function descargarPDFWBR() {
         });
     }
 }
+
+function cerrarWBR() {
     if (wbrActualSesion) {
         llamarAppScript('cerrarWBR', {
             mes: wbrActualSesion.mes,
