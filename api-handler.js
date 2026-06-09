@@ -4,7 +4,7 @@
 // ⚠️ NO TOCAR ESTE ARCHIVO - CONEXIÓN CRÍTICA
 // =======================================
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx22j9B_70xAc3ZEuTRpAeSXE4a4Mt9Q34vh_9pZHH-n8DJx59wLDv9bu-qR9JkwFQy/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzkr-JLoKmkCk98B5PyhPyR1piOtOr0qUvAY9_9EymTc_cWm_Z7qRus4vFdKOg2quiN/exec';
 
 /**
  * FUNCIÓN CRÍTICA - Realiza todas las llamadas a Google AppScript
