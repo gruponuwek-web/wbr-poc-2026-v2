@@ -647,10 +647,8 @@ function renderizarVista(vista, acciones) {
 }
 
 function renderizarVistaSemanal(acciones) {
-    // Obtener la semana actual
-    const hoy = new Date();
-    const primerDia = new Date(hoy);
-    primerDia.setDate(hoy.getDate() - hoy.getDay() + 1); // Lunes
+    // Usar la semana navegada, NO siempre hoy
+    const primerDia = new Date(semanaActualAcciones.inicio);
     
     const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     let kanbanHTML = '';
